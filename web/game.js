@@ -99,6 +99,8 @@ let isBattleActive = false;
 let currentTurn = 'player';
 let battleTimer = null;
 let currentView = 'shop';
+let temporaryLuck = 0;
+let luckTimer = null;
 
 // --- CORE FUNCTIONS ---
 
@@ -327,15 +329,16 @@ function updateDropPanel() {
     let panel = document.getElementById('drop-panel');
     if (!panel) {
         panel = document.createElement('div'); panel.id = 'drop-panel';
-        panel.style.position = 'absolute'; panel.style.bottom = '180px'; panel.style.left = '15px';
-        panel.style.width = '220px'; panel.style.background = 'rgba(0,0,0,0.9)';
-        panel.style.border = '1px solid #444'; panel.style.borderRadius = '8px';
+        panel.style.position = 'absolute'; panel.style.bottom = '15px'; panel.style.left = '15px';
+        panel.style.width = '230px'; panel.style.background = 'rgba(0,0,0,0.95)';
+        panel.style.border = '1px solid #f1c40f'; panel.style.borderRadius = '8px';
         panel.style.padding = '10px'; panel.style.fontSize = '10px';
-        panel.style.maxHeight = '250px'; panel.style.overflowY = 'auto';
+        panel.style.maxHeight = '200px'; panel.style.overflowY = 'auto';
+        panel.style.zIndex = '10';
         document.getElementById('game-container').appendChild(panel);
     }
     if (!currentEnemy) { panel.innerHTML = 'Buscando inimigo...'; return; }
-    const luck = player.luck * player.rebirthUpgrades.luckMult;
+    const luck = (player.luck + temporaryLuck) * player.rebirthUpgrades.luckMult;
     let html = `<h4 style="color:#f1c40f; margin-bottom:5px; text-align:center;">DROPS POSSÍVEIS</h4>`;
     const totalWeight = rarities.reduce((acc, r) => acc + r.weight, 0);
     const luckFactor = Math.pow(luck, 0.7); 
@@ -403,15 +406,33 @@ function spawnEnemy() {
     let zMult = 1 + (currentZone - 1) * 2;
     if (inDungeon) zMult *= (dungeonFloor * (currentDungeonType === 'hell' ? 15 : 4));
     const bMult = isBoss ? (inDungeon ? 20 : 6) : 1;
+    
+    // Modificadores de Monstro (Classes)
+    let modName = ""; let modColor = null; let modScale = 1; let modStatMult = 1; let modLootMult = 1;
+    const rollMod = Math.random();
+    if (!isBoss && rollMod < 0.15) { // 15% chance de modificador
+        if (rollMod < 0.05) { modName = "GIGANTE "; modScale = 2.2; modStatMult = 5; modLootMult = 20; modColor = "#c0392b"; }
+        else if (rollMod < 0.10) { modName = "DOURADO "; modStatMult = 2; modLootMult = 50; modColor = "#f1c40f"; }
+        else { modName = "FANTASMA "; modStatMult = 3; modLootMult = 15; modColor = "#8e44ad"; }
+    }
+
     currentEnemy = {
-        name: isBoss ? `BOSS ${base.name.toUpperCase()}` : base.name,
-        hp: Math.floor(base.hp * zMult * bMult), maxHp: Math.floor(base.hp * zMult * bMult),
-        atk: Math.floor(base.atk * zMult * bMult), def: Math.floor(20 * zMult),
-        gold: Math.floor(100 * zMult * bMult), exp: Math.floor(200 * zMult * bMult),
-        isBoss, color: inDungeon ? (currentDungeonType === 'hell' ? "#ff0000" : "#8e44ad") : base.color, scale: isBoss ? 1.7 : 1
+        name: modName + (isBoss ? `BOSS ${base.name.toUpperCase()}` : base.name),
+        hp: Math.floor(base.hp * zMult * bMult * modStatMult), maxHp: Math.floor(base.hp * zMult * bMult * modStatMult),
+        atk: Math.floor(base.atk * zMult * bMult * modStatMult), def: Math.floor(20 * zMult * modStatMult),
+        gold: Math.floor(100 * zMult * bMult * modLootMult), exp: Math.floor(200 * zMult * bMult * modLootMult),
+        isBoss, color: modColor || (inDungeon ? (currentDungeonType === 'hell' ? "#ff0000" : "#8e44ad") : base.color), 
+        scale: (isBoss ? 1.7 : 1) * modScale, modType: modName.trim()
     };
+    
     const sprite = document.getElementById('enemy-sprite');
-    if (sprite) { sprite.style.backgroundColor = currentEnemy.color; sprite.style.transform = `scale(${currentEnemy.scale})`; }
+    if (sprite) { 
+        sprite.style.backgroundColor = currentEnemy.color; 
+        sprite.style.transform = `scale(${currentEnemy.scale})`;
+        if (currentEnemy.modType === "FANTASMA") sprite.style.opacity = "0.5";
+        else sprite.style.opacity = "1";
+    }
+    
     isBattleActive = true; currentTurn = 'player'; updateUI();
     battleTimer = setTimeout(battleLoop, Math.max(200, 1000 - (player.speed - 100) * 5));
 }
@@ -475,6 +496,17 @@ function handleVictory(isPlayer) {
         const goldGain = Math.floor(currentEnemy.gold * (1 + player.goldBonus / 100));
         const expGain = Math.floor(currentEnemy.exp * (1 + player.expBonus / 100));
         player.gold += goldGain; player.exp += expGain;
+        
+        // Bônus de Modificador
+        if (currentEnemy.modType === "GIGANTE") {
+            temporaryLuck += 50;
+            logMessage(`🌟 SORTE GIGANTE: +50 Sorte por 30s!`);
+            clearTimeout(luckTimer);
+            luckTimer = setTimeout(() => { temporaryLuck -= 50; logMessage(`⌛ Sorte Gigante expirou.`); updateUI(); }, 30000);
+        } else if (currentEnemy.modType === "DOURADO") {
+            logMessage(`💰 TESOURO DOURADO: Bônus massivo de ouro!`);
+        }
+
         if (inDungeon) {
             if (dungeonFloor < MAX_DUNGEON_FLOORS) dungeonFloor++;
             else { inDungeon = false; dungeonFloor = 0; rollLoot(true); }
