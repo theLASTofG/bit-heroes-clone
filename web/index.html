@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bit Heroes Clone - God Edition</title>
+    <title>Bit Heroes Clone - Ultimate Stats Edition</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -30,6 +30,24 @@
             </div>
         </div>
 
+        <!-- PAINEL ESQUERDO: STATUS TOTAIS -->
+        <div id="left-panel">
+            <h3>STATUS TOTAIS</h3>
+            <div id="stats-list">
+                <div class="stat-row"><span>⚔️ ATAQUE:</span> <span id="stat-atk" class="val">0</span></div>
+                <div class="stat-row"><span>❤️ VIDA MÁX:</span> <span id="stat-hp" class="val">0</span></div>
+                <div class="stat-row"><span>🛡️ DEFESA:</span> <span id="stat-def" class="val">0</span></div>
+                <div class="stat-row"><span>💥 CRÍTICO:</span> <span id="stat-crit" class="val">0%</span></div>
+                <div class="stat-row"><span>💨 ESQUIVA:</span> <span id="stat-evade" class="val">0%</span></div>
+                <div class="stat-row"><span>🩸 LIFE STEAL:</span> <span id="stat-lifesteal" class="val">0%</span></div>
+                <div class="stat-row"><span>🍀 SORTE:</span> <span id="stat-luck" class="val">1.0x</span></div>
+                <div class="stat-row"><span>✨ ENCANTS:</span> <span id="stat-enchants" class="val">0/10</span></div>
+            </div>
+            <div id="synergy-bonus" style="display:none; margin-top:15px; padding:8px; background:rgba(241,196,15,0.1); border:1px solid #f1c40f; border-radius:5px; font-size:11px; color:#f1c40f; text-align:center;">
+                🌟 SINERGIA ATIVA (+20%)
+            </div>
+        </div>
+
         <!-- CENA DE BATALHA -->
         <div id="battle-scene">
             <div id="enemy-area" class="entity-area">
@@ -38,7 +56,7 @@
                     <div id="enemy-hp-bar-inner" class="hp-bar"></div>
                     <span id="enemy-hp-text">0/0</span>
                 </div>
-                <span id="enemy-name">Carregando...</span>
+                <span id="enemy-name">...</span>
                 <span id="enemy-type" class="badge">ZONA 1</span>
             </div>
 
@@ -49,18 +67,18 @@
                     <div id="player-hp-bar-inner" class="hp-bar"></div>
                     <span id="player-hp-text">0/0</span>
                 </div>
-                <span id="player-name">Herói Lendário</span>
+                <span id="player-name">HERÓI</span>
             </div>
         </div>
 
-        <!-- PAINEL DIREITO: EQUIPAMENTOS, MONTARIA E INVENTÁRIO -->
+        <!-- PAINEL DIREITO: EQUIPAMENTOS E INVENTÁRIO -->
         <div id="right-panel">
             <div class="panel-section">
                 <h3>EQUIPAMENTOS</h3>
                 <div class="equip-slots">
-                    <div class="slot" id="slot-weapon" data-type="weapon">⚔️</div>
-                    <div class="slot" id="slot-armor" data-type="armor">🛡️</div>
-                    <div class="slot" id="slot-mount" data-type="mount">🐎</div>
+                    <div class="slot" id="slot-weapon">⚔️</div>
+                    <div class="slot" id="slot-armor">🛡️</div>
+                    <div class="slot" id="slot-mount">🐎</div>
                 </div>
             </div>
             <div class="panel-section">
@@ -68,19 +86,15 @@
                 <div id="inventory-grid" class="grid"></div>
             </div>
             <div class="panel-section">
-                <h3>LOJA DE UPGRADES</h3>
-                <div id="shop-container">
-                    <button class="shop-btn" id="upgrade-atk">Melhorar ATK (💰 100)</button>
-                    <button class="shop-btn" id="upgrade-hp">Melhorar HP (💰 100)</button>
-                    <button class="shop-btn" id="upgrade-luck">Melhorar SORTE (💰 500)</button>
-                </div>
+                <h3>MELHORIAS & ENCANTAMENTOS</h3>
+                <div id="shop-container"></div>
             </div>
         </div>
 
         <!-- LOG DE BATALHA -->
         <div id="battle-log"></div>
 
-        <!-- TOOLTIP DINÂMICO -->
+        <!-- TOOLTIP -->
         <div id="tooltip" class="tooltip" style="display: none;"></div>
     </div>
     <script src="game.js"></script>
