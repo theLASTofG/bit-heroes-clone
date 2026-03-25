@@ -36,6 +36,24 @@ const itemIcons = {
     pet: ["💧", "🧚", "🐲", "🐱", "🤖", "👻", "😈", "👼"]
 };
 
+const relicTemplates = [
+    { name: "Olho de Odin", icon: "👁️", stat: "atk" },
+    { name: "Coração de Dragão", icon: "❤️", stat: "hp" },
+    { name: "Anel do Destino", icon: "💍", stat: "luck" },
+    { name: "Mão de Midas", icon: "✋", stat: "goldBonus" },
+    { name: "Pena de Fênix", icon: "🪶", stat: "speed" }
+];
+
+const enchantStats = [
+    { id: 'atk', name: 'Ataque', icon: '⚔️', base: 50 },
+    { id: 'hp', name: 'Vida', icon: '❤️', base: 200 },
+    { id: 'crit', name: 'Crítico', icon: '💥', base: 2 },
+    { id: 'evade', name: 'Esquiva', icon: '💨', base: 2 },
+    { id: 'speed', name: 'Velocidade', icon: '👟', base: 5 },
+    { id: 'goldBonus', name: 'Ouro %', icon: '💰', base: 10 },
+    { id: 'expBonus', name: 'EXP %', icon: '✨', base: 10 }
+];
+
 // --- ÁRVORE DE TALENTOS ---
 const talents = {
     assassin: [
@@ -64,7 +82,7 @@ const player = {
     doubleAtk: 0, tripleAtk: 0, thorns: 0, speed: 100, luck: 2.0, powerRating: 0,
     
     rebirths: 0, rebirthPoints: 0, talentPoints: 0,
-    talentsOwned: {}, // { talentId: level }
+    talentsOwned: {}, 
     rebirthUpgrades: { atkMult: 1, hpMult: 1, luckMult: 1, expMult: 1 },
 
     equipment: { weapon: null, armor: null, mount: null, pet: null },
@@ -72,7 +90,7 @@ const player = {
     inventory: [],
     enchants: Array(10).fill(null),
     upgrades: { atk: 0, hp: 0, luck: 0 },
-    debuffs: [] // { id, name, duration, type, value }
+    debuffs: [] 
 };
 
 // --- INIMIGOS ---
@@ -101,12 +119,16 @@ let battleTimer = null;
 let currentView = 'shop';
 let temporaryLuck = 0;
 let luckTimer = null;
+let inDungeon = false;
+let currentDungeonType = 'normal';
+let dungeonFloor = 0;
+const MAX_DUNGEON_FLOORS = 5;
 
 // --- CORE FUNCTIONS ---
 
 function calculateStats() {
-    let totalHp = (player.baseHp + (player.level * 100) + (player.upgrades.hp * 500)) * player.rebirthUpgrades.hpMult;
-    let totalAtk = (player.baseAtk + (player.level * 20) + (player.upgrades.atk * 100)) * player.rebirthUpgrades.atkMult;
+    let totalHp = (player.baseHp + (player.level * 100) + (player.upgrades.hp * 500));
+    let totalAtk = (player.baseAtk + (player.level * 20) + (player.upgrades.atk * 100));
     let totalDef = (player.baseDef + (player.level * 10));
     let totalCrit = 5;
     let totalEvade = 5;
@@ -115,14 +137,12 @@ function calculateStats() {
     let totalTripleAtk = 0;
     let totalThorns = 0;
     let totalSpeed = 100;
-    let totalCritDmg = 3.5; // Base 3.5x
+    let totalCritDmg = 3.5; 
 
-    // Aplicar Talentos
     const t = player.talentsOwned;
     if (t.crit_dmg) totalCritDmg += (t.crit_dmg * 0.2);
     if (t.double_chance) totalDoubleAtk += (t.double_chance * 5);
     if (t.triple_chance) totalTripleAtk += (t.triple_chance * 2);
-    if (t.thorns_buff) totalThorns *= (1 + (t.thorns_buff * 0.5));
     if (t.lifesteal_buff) totalLifeSteal += (t.lifesteal_buff * 5);
 
     player.goldBonus = 0;
@@ -145,6 +165,16 @@ function calculateStats() {
         }
     });
 
+    player.relics.forEach(relic => {
+        if (!relic) return;
+        const bonus = 1 + (relic.bonusValue / 100);
+        if (relic.stat === 'atk') totalAtk *= bonus;
+        if (relic.stat === 'hp') totalHp *= bonus;
+        if (relic.stat === 'luck') player.luck *= bonus;
+        if (relic.stat === 'goldBonus') player.goldBonus += relic.bonusValue;
+        if (relic.stat === 'speed') totalSpeed *= bonus;
+    });
+
     player.enchants.forEach(en => {
         if (!en) return;
         if (en.stat === 'atk') totalAtk += en.value;
@@ -159,6 +189,8 @@ function calculateStats() {
         if (en.stat === 'goldBonus') player.goldBonus += en.value;
         if (en.stat === 'expBonus') player.expBonus += en.value;
     });
+
+    if (t.thorns_buff) totalThorns *= (1 + (t.thorns_buff * 0.5));
 
     let luckMult = player.rebirthUpgrades.luckMult;
     if (t.luck_buff) luckMult *= (1 + (t.luck_buff * 0.5));
@@ -465,7 +497,6 @@ function spawnEnemy() {
 function battleLoop() {
     if (!isBattleActive || !currentEnemy) return;
     
-    // Processar Debuffs
     if (currentTurn === 'player') {
         const stun = player.debuffs.find(d => d.id === 'stun');
         if (stun) {
@@ -481,13 +512,12 @@ function battleLoop() {
         currentTurn = 'player';
     }
     
-    // Dano de Bleed
     const bleed = player.debuffs.find(d => d.id === 'bleed');
     if (bleed) {
         const bDmg = Math.floor(player.maxHp * 0.05);
         player.hp -= bDmg;
         logMessage(`🩸 Sangramento: -${formatNumber(bDmg)}`);
-        if (player.hp <= 0) handleVictory(false);
+        if (player.hp <= 0) { isBattleActive = false; handleVictory(false); return; }
     }
 
     if (isBattleActive) battleTimer = setTimeout(battleLoop, Math.max(200, 1000 - (player.speed - 100) * 5));
@@ -516,7 +546,6 @@ function performAttack(att, def) {
             if (player.lifeSteal > 0) player.hp = Math.min(player.maxHp, player.hp + Math.floor(dmg * (player.lifeSteal / 100)));
         } else {
             if (player.thorns > 0) { currentEnemy.hp -= player.thorns; logMessage(`🌵 Espinhos: ${formatNumber(player.thorns)}`); }
-            // Inimigo aplica Debuff
             if (currentZone > 3 || inDungeon) {
                 const roll = Math.random() * 100;
                 const d = enemyDebuffs.find(db => roll < db.chance);
@@ -540,7 +569,7 @@ function performAttack(att, def) {
 }
 
 function handleVictory(isPlayer) {
-    player.debuffs = []; // Limpa debuffs ao fim da luta
+    player.debuffs = []; 
     if (isPlayer) {
         const goldGain = Math.floor(currentEnemy.gold * (1 + player.goldBonus / 100));
         const expGain = Math.floor(currentEnemy.exp * (1 + player.expBonus / 100));
