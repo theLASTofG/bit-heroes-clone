@@ -1,15 +1,15 @@
 // --- SISTEMA DE RARIDADES (10 Tiers) ---
 const rarities = [
-    { name: "Common", color: "#7f8c8d", weight: 60, bonusMult: 1.0 },
-    { name: "Uncommon", color: "#2ecc71", weight: 25, bonusMult: 1.5 },
-    { name: "Rare", color: "#3498db", weight: 10, bonusMult: 2.2 },
-    { name: "Epic", color: "#9b59b6", weight: 4, bonusMult: 3.5 },
-    { name: "Legendary", color: "#f1c40f", weight: 0.8, bonusMult: 6.0 },
-    { name: "Mythic", color: "#e67e22", weight: 0.15, bonusMult: 10.0 },
-    { name: "Celestial", color: "#1abc9c", weight: 0.04, bonusMult: 18.0 },
-    { name: "Void", color: "#8e44ad", weight: 0.008, bonusMult: 30.0 },
-    { name: "Ancient", color: "#c0392b", weight: 0.0015, bonusMult: 50.0 },
-    { name: "Godly", color: "#ffffff", weight: 0.0004, bonusMult: 100.0 }
+    { name: "Common", color: "#7f8c8d", weight: 60, bonusMult: 1.0, relicBonus: 5 },
+    { name: "Uncommon", color: "#2ecc71", weight: 25, bonusMult: 1.5, relicBonus: 10 },
+    { name: "Rare", color: "#3498db", weight: 10, bonusMult: 2.2, relicBonus: 15 },
+    { name: "Epic", color: "#9b59b6", weight: 4, bonusMult: 3.5, relicBonus: 20 },
+    { name: "Legendary", color: "#f1c40f", weight: 0.8, bonusMult: 6.0, relicBonus: 25 },
+    { name: "Mythic", color: "#e67e22", weight: 0.15, bonusMult: 10.0, relicBonus: 35 },
+    { name: "Celestial", color: "#1abc9c", weight: 0.04, bonusMult: 18.0, relicBonus: 50 },
+    { name: "Void", color: "#8e44ad", weight: 0.008, bonusMult: 30.0, relicBonus: 75 },
+    { name: "Ancient", color: "#c0392b", weight: 0.0015, bonusMult: 50.0, relicBonus: 100 },
+    { name: "Godly", color: "#ffffff", weight: 0.0004, bonusMult: 100.0, relicBonus: 200 }
 ];
 
 // --- SISTEMA DE PETS ---
@@ -21,7 +21,16 @@ const petBases = [
     { name: "Anjo Guardião", icon: "👼", stat: "evade", val: 20, rarity: "Mythic" }
 ];
 
-// --- SISTEMA DE ENCANTAMENTOS (Variados) ---
+// --- SISTEMA DE RELÍQUIAS ---
+const relicTemplates = [
+    { name: "Heart of Fire", icon: "💎", stat: "atk" },
+    { name: "Eternal Soul", icon: "🧿", stat: "hp" },
+    { name: "Ancient Shield", icon: "🛡️", stat: "def" },
+    { name: "Void Eye", icon: "👁️", stat: "crit" },
+    { name: "Ghost Wing", icon: "🕊️", stat: "evade" }
+];
+
+// --- SISTEMA DE ENCANTAMENTOS ---
 const enchantStats = [
     { id: 'atk', name: 'Ataque', icon: '⚔️', base: 10 },
     { id: 'hp', name: 'Vida', icon: '❤️', base: 100 },
@@ -41,6 +50,7 @@ const player = {
     luck: 1.0, powerRating: 0,
     
     equipment: { weapon: null, armor: null, mount: null, pet: null },
+    relics: [null, null, null, null, null], // 5 slots de relíquias
     inventory: [],
     enchants: Array(10).fill(null),
     upgrades: { atk: 0, hp: 0, luck: 0 }
@@ -69,47 +79,73 @@ let battleTimer = null;
 // --- CORE FUNCTIONS ---
 
 function calculateStats() {
-    player.maxHp = (player.baseHp + (player.level * 40) + (player.upgrades.hp * 100));
-    player.atk = (player.baseAtk + (player.level * 8) + (player.upgrades.atk * 20));
-    player.def = (player.baseDef + (player.level * 4));
-    player.crit = 5; player.evade = 5; player.lifeSteal = 0;
-    player.goldBonus = 0; player.expBonus = 0;
+    // 1. Calcular Stats Base
+    let totalHp = (player.baseHp + (player.level * 40) + (player.upgrades.hp * 100));
+    let totalAtk = (player.baseAtk + (player.level * 8) + (player.upgrades.atk * 20));
+    let totalDef = (player.baseDef + (player.level * 4));
+    let totalCrit = 5;
+    let totalEvade = 5;
+    let totalLifeSteal = 0;
+    player.goldBonus = 0;
+    player.expBonus = 0;
 
+    // 2. Adicionar Equipamentos & Pets (Aditivos)
     Object.values(player.equipment).forEach(item => {
         if (!item) return;
         if (item.stats) {
-            if (item.stats.atk) player.atk += item.stats.atk;
-            if (item.stats.def) player.def += item.stats.def;
-            if (item.stats.hp) player.maxHp += item.stats.hp;
-            if (item.stats.crit) player.crit += item.stats.crit;
-            if (item.stats.evade) player.evade += item.stats.evade;
-            if (item.stats.lifeSteal) player.lifeSteal += item.stats.lifeSteal;
-        } else if (item.stat) {
+            if (item.stats.atk) totalAtk += item.stats.atk;
+            if (item.stats.def) totalDef += item.stats.def;
+            if (item.stats.hp) totalHp += item.stats.hp;
+            if (item.stats.crit) totalCrit += item.stats.crit;
+            if (item.stats.evade) totalEvade += item.stats.evade;
+            if (item.stats.lifeSteal) totalLifeSteal += item.stats.lifeSteal;
+        } else if (item.stat) { // Pet
             const val = item.val * (1 + player.level * 0.1);
-            if (item.stat === 'atk') player.atk += val;
-            if (item.stat === 'hp') player.maxHp += val;
-            if (item.stat === 'crit') player.crit += val;
-            if (item.stat === 'evade') player.evade += val;
-            if (item.stat === 'lifeSteal') player.lifeSteal += val;
+            if (item.stat === 'atk') totalAtk += val;
+            if (item.stat === 'hp') totalHp += val;
+            if (item.stat === 'crit') totalCrit += val;
+            if (item.stat === 'evade') totalEvade += val;
+            if (item.stat === 'lifeSteal') totalLifeSteal += val;
         }
     });
 
+    // 3. Adicionar Encantamentos (Aditivos)
     player.enchants.forEach(en => {
         if (!en) return;
-        if (en.stat === 'atk') player.atk += en.value;
-        if (en.stat === 'hp') player.maxHp += en.value;
-        if (en.stat === 'crit') player.crit += en.value;
-        if (en.stat === 'evade') player.evade += en.value;
-        if (en.stat === 'lifeSteal') player.lifeSteal += en.value;
+        if (en.stat === 'atk') totalAtk += en.value;
+        if (en.stat === 'hp') totalHp += en.value;
+        if (en.stat === 'crit') totalCrit += en.value;
+        if (en.stat === 'evade') totalEvade += en.value;
+        if (en.stat === 'lifeSteal') totalLifeSteal += en.value;
         if (en.stat === 'goldBonus') player.goldBonus += en.value;
         if (en.stat === 'expBonus') player.expBonus += en.value;
     });
 
+    // 4. Sinergia (+25% multiplicativo)
     if (player.equipment.weapon && player.equipment.armor && 
         player.equipment.weapon.rarity.name === player.equipment.armor.rarity.name) {
-        player.atk *= 1.25;
-        player.maxHp *= 1.25;
+        totalAtk *= 1.25;
+        totalHp *= 1.25;
     }
+
+    // 5. Aplicar Relíquias (Multiplicativo %)
+    let atkMult = 1, hpMult = 1, defMult = 1, critMult = 1, evadeMult = 1;
+    player.relics.forEach(relic => {
+        if (!relic) return;
+        const bonus = relic.bonusValue / 100;
+        if (relic.stat === 'atk') atkMult += bonus;
+        if (relic.stat === 'hp') hpMult += bonus;
+        if (relic.stat === 'def') defMult += bonus;
+        if (relic.stat === 'crit') critMult += bonus;
+        if (relic.stat === 'evade') evadeMult += bonus;
+    });
+
+    player.atk = totalAtk * atkMult;
+    player.maxHp = totalHp * hpMult;
+    player.def = totalDef * defMult;
+    player.crit = totalCrit * critMult;
+    player.evade = totalEvade * evadeMult;
+    player.lifeSteal = totalLifeSteal;
 
     player.powerRating = Math.floor((player.atk * 2) + (player.maxHp / 5) + (player.def * 3) + (player.crit * 10) + (player.evade * 10) + (player.lifeSteal * 20));
 }
@@ -125,9 +161,9 @@ function updateUI() {
     document.getElementById('stat-atk').textContent = Math.floor(player.atk);
     document.getElementById('stat-hp').textContent = Math.floor(player.maxHp);
     document.getElementById('stat-def').textContent = Math.floor(player.def);
-    document.getElementById('stat-crit').textContent = player.crit + "%";
-    document.getElementById('stat-evade').textContent = player.evade + "%";
-    document.getElementById('stat-lifesteal').textContent = player.lifeSteal + "%";
+    document.getElementById('stat-crit').textContent = player.crit.toFixed(1) + "%";
+    document.getElementById('stat-evade').textContent = player.evade.toFixed(1) + "%";
+    document.getElementById('stat-lifesteal').textContent = player.lifeSteal.toFixed(1) + "%";
     document.getElementById('stat-luck').textContent = player.luck.toFixed(1) + "x";
     document.getElementById('stat-pr').textContent = player.powerRating;
 
@@ -137,6 +173,7 @@ function updateUI() {
         document.getElementById('enemy-name').textContent = currentEnemy.name;
     }
 
+    // Equipamento & Pet
     ['weapon', 'armor', 'mount', 'pet'].forEach(type => {
         const slot = document.getElementById(`slot-${type}`);
         const item = player.equipment[type];
@@ -144,6 +181,21 @@ function updateUI() {
         slot.className = `slot ${item?.rarity?.name?.toLowerCase() || item?.rarity?.toLowerCase() || ''}`;
         if (item) { slot.onmouseover = (e) => showTooltip(e, item); slot.onmouseout = hideTooltip; }
         else { slot.onmouseover = null; }
+    });
+
+    // Relíquias
+    const relicContainer = document.getElementById('relic-slots');
+    relicContainer.innerHTML = '';
+    player.relics.forEach((relic, i) => {
+        const div = document.createElement('div');
+        div.className = `slot relic-slot ${relic ? relic.rarity.name.toLowerCase() : ''}`;
+        div.textContent = relic ? relic.icon : '💠';
+        if (relic) {
+            div.onmouseover = (e) => showTooltip(e, relic);
+            div.onmouseout = hideTooltip;
+            div.onclick = () => unequipRelic(i);
+        }
+        relicContainer.appendChild(div);
     });
 
     updateShopUI();
@@ -309,6 +361,14 @@ function handleVictory(isPlayer) {
 
 function rollLoot(guaranteedLegendary = false) {
     if (!currentEnemy) return;
+    
+    // Chance de Relíquia (Exclusivo de Bosses)
+    if (currentEnemy.isBoss && Math.random() < 0.4) {
+        const relic = generateRelic();
+        player.inventory.push(relic);
+        logMessage(`💠 RELÍQUIA: <span style="color:${relic.rarity.color}">[${relic.rarity.name}] ${relic.name}</span>`);
+    }
+
     let chance = currentEnemy.isBoss ? 1.0 : 0.3;
     if (Math.random() < chance) {
         const item = guaranteedLegendary ? generateItem(null, rarities[4]) : generateItem();
@@ -322,6 +382,26 @@ function rollLoot(guaranteedLegendary = false) {
         logMessage(`🐾 PET ENCONTRADO: ${pet.icon} ${pet.name}!`);
         updateInventoryUI();
     }
+}
+
+function generateRelic() {
+    const template = relicTemplates[Math.floor(Math.random() * relicTemplates.length)];
+    const roll = Math.random() * 100 / player.luck;
+    let cumulative = 0;
+    let rarity = rarities[0];
+    for (const r of rarities) {
+        cumulative += r.weight;
+        if (roll <= cumulative) { rarity = r; break; }
+    }
+    return {
+        id: Math.random().toString(36).substr(2, 9),
+        name: template.name,
+        icon: template.icon,
+        type: 'relic',
+        stat: template.stat,
+        rarity: rarity,
+        bonusValue: rarity.relicBonus
+    };
 }
 
 function generateItem(type = null, forcedRarity = null) {
@@ -338,6 +418,36 @@ function generateItem(type = null, forcedRarity = null) {
     else if (type === 'armor') { stats.def = Math.floor(10 * m); stats.evade = Math.floor(3 * m); }
     else { stats.hp = Math.floor(100 * m); stats.lifeSteal = Math.floor(3 * m); }
     return { id: Math.random().toString(36).substr(2, 9), name: `${rarity.name} ${template.name}`, icon: template.icon, type, rarity, stats };
+}
+
+function equipRelic(inventoryIndex) {
+    const relic = player.inventory[inventoryIndex];
+    let equipped = false;
+    for (let i = 0; i < player.relics.length; i++) {
+        if (player.relics[i] === null) {
+            player.relics[i] = relic;
+            player.inventory.splice(inventoryIndex, 1);
+            equipped = true;
+            break;
+        }
+    }
+    if (!equipped) {
+        logMessage(`❌ Slots de relíquias cheios!`);
+    } else {
+        calculateStats();
+        updateUI();
+        logMessage(`💠 Relíquia equipada!`);
+    }
+}
+
+function unequipRelic(relicIndex) {
+    const relic = player.relics[relicIndex];
+    if (relic) {
+        player.inventory.push(relic);
+        player.relics[relicIndex] = null;
+        calculateStats();
+        updateUI();
+    }
 }
 
 function rollEnchant(slotIndex) {
@@ -365,7 +475,9 @@ const tooltip = document.getElementById('tooltip');
 function showTooltip(e, item) {
     tooltip.style.display = 'block'; tooltip.style.borderColor = item.rarity?.color || '#fff';
     let sHtml = '';
-    if (item.stats) {
+    if (item.type === 'relic') {
+        sHtml = `<div class="tooltip-stat"><span>BÔNUS:</span> <span class="stat-up">+${item.bonusValue}% ${item.stat.toUpperCase()}</span></div>`;
+    } else if (item.stats) {
         const current = player.equipment[item.type];
         ['atk', 'def', 'hp', 'crit', 'evade', 'lifeSteal'].forEach(s => {
             const v = item.stats[s] || 0; const cV = current ? (current.stats[s] || 0) : 0;
@@ -391,7 +503,11 @@ function updateInventoryUI() {
     player.inventory.slice(-24).forEach((item, i) => {
         const div = document.createElement('div'); div.className = `item-slot ${item.rarity?.name?.toLowerCase() || item.rarity?.toLowerCase() || ''}`; div.textContent = item.icon;
         div.onmouseover = (e) => showTooltip(e, item); div.onmouseout = hideTooltip;
-        div.onclick = () => { equipItem(player.inventory.indexOf(item)); hideTooltip(); };
+        div.onclick = () => { 
+            if (item.type === 'relic') equipRelic(player.inventory.indexOf(item));
+            else equipItem(player.inventory.indexOf(item)); 
+            hideTooltip(); 
+        };
         grid.appendChild(div);
     });
 }
