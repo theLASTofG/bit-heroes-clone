@@ -540,8 +540,13 @@ function performAttack(att, def) {
         if (def.hp <= 0) break;
         let mult = 1; let crit = false;
         if (isPlayer && Math.random() * 100 < player.crit) { mult = player.critDmg; crit = true; }
-        let dmg = Math.floor((att.atk - (def.def * 0.4)) * (Math.random() * 0.2 + 0.9) * mult);
-        dmg = Math.max(Math.floor(att.atk * 0.3), dmg);
+        let attackerAtk = Number(att.atk) || 0;
+        let defenderDef = Number(def.def) || 0;
+        let dmgMult = Number(mult) || 1;
+        
+        let dmg = Math.floor((attackerAtk - (defenderDef * 0.4)) * (Math.random() * 0.2 + 0.9) * dmgMult);
+        dmg = Math.max(Math.floor(attackerAtk * 0.3), dmg);
+        if (isNaN(dmg)) dmg = 0;
         def.hp -= dmg;
         
         if (isPlayer) {
