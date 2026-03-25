@@ -3,19 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bit Heroes Clone - Web Version</title>
+    <title>Bit Heroes Clone - Expanded Edition</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container">
+        <!-- Top Bar: Nível e Progresso -->
+        <div id="top-bar">
+            <div class="stat-group">
+                <span class="label">NÍVEL:</span>
+                <span id="player-level">1</span>
+            </div>
+            <div class="stat-group">
+                <span class="label">OURO:</span>
+                <span id="player-gold">0</span>
+            </div>
+            <div class="stat-group">
+                <span class="label">EXP:</span>
+                <div class="exp-bar-container">
+                    <div id="player-exp-bar" class="exp-bar"></div>
+                </div>
+            </div>
+        </div>
+
         <div id="battle-scene">
             <div id="enemy-area" class="entity-area">
                 <div id="enemy-sprite" class="sprite"></div>
                 <div class="hp-bar-container">
                     <div id="enemy-hp-bar-inner" class="hp-bar"></div>
-                    <span id="enemy-hp-text">100/100</span>
+                    <span id="enemy-hp-text">150/150</span>
                 </div>
-                <span id="enemy-name">Monstro Selvagem</span>
+                <span id="enemy-name">Slime Gigante</span>
+                <span id="enemy-type" class="badge">COMUM</span>
             </div>
 
             <div id="player-area" class="entity-area">
@@ -28,11 +47,25 @@
             </div>
 
             <div id="battle-log">
-                <p>A batalha começou!</p>
+                <p>Prepare-se para a jornada!</p>
             </div>
         </div>
+
+        <!-- Painel Lateral: Equipamentos e Inventário -->
+        <div id="inventory-panel">
+            <h3>EQUIPAMENTOS</h3>
+            <div class="equip-slots">
+                <div class="slot" id="slot-weapon" title="Arma">⚔️</div>
+                <div class="slot" id="slot-armor" title="Armadura">🛡️</div>
+            </div>
+            <h3>INVENTÁRIO</h3>
+            <div id="inventory-grid" class="grid">
+                <!-- Itens serão inseridos aqui via JS -->
+            </div>
+        </div>
+
         <div id="ui-controls">
-            <button id="restart-btn" style="display:none;">Reiniciar Batalha</button>
+            <button id="restart-btn" style="display:none;">Próxima Batalha</button>
         </div>
     </div>
     <script src="game.js"></script>

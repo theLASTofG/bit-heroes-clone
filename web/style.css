@@ -1,7 +1,7 @@
 body {
     margin: 0;
     padding: 0;
-    background-color: #2c3e50;
+    background-color: #1a1a1a;
     color: #ecf0f1;
     font-family: 'Courier New', Courier, monospace;
     display: flex;
@@ -12,37 +12,91 @@ body {
 }
 
 #game-container {
-    width: 600px;
-    height: 500px;
-    background-color: #34495e;
-    border: 4px solid #ecf0f1;
+    width: 800px;
+    height: 600px;
+    background-color: #2c3e50;
+    border: 4px solid #bdc3c7;
     border-radius: 8px;
     position: relative;
     padding: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    grid-template-rows: 50px 1fr 120px;
+    gap: 15px;
 }
 
+/* Barra Superior: Nível, Ouro, EXP */
+#top-bar {
+    grid-column: 1 / span 2;
+    background-color: #34495e;
+    border: 2px solid #7f8c8d;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    gap: 30px;
+}
+
+.stat-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.label {
+    font-weight: bold;
+    color: #f1c40f;
+    font-size: 14px;
+}
+
+.exp-bar-container {
+    width: 150px;
+    height: 10px;
+    background-color: #2c3e50;
+    border: 1px solid #ecf0f1;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.exp-bar {
+    width: 0%;
+    height: 100%;
+    background-color: #3498db;
+    transition: width 0.3s ease;
+}
+
+/* Cena de Batalha */
 #battle-scene {
+    grid-column: 1;
+    grid-row: 2;
+    background-color: #34495e;
+    border: 2px solid #7f8c8d;
+    border-radius: 4px;
     display: flex;
     flex-direction: column;
     justify-content: space-around;
-    height: 80%;
+    padding: 20px;
 }
 
 .entity-area {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
-#enemy-area {
-    margin-bottom: 20px;
+.badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: #95a5a6;
+    color: white;
+    font-weight: bold;
 }
 
-#player-area {
-    margin-top: 20px;
-}
+.badge.boss { background-color: #e74c3c; }
+.badge.elite { background-color: #9b59b6; }
 
 .sprite {
     width: 80px;
@@ -55,7 +109,6 @@ body {
 }
 
 #player-sprite {
-    /* Pixel Art Hero Placeholder */
     background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5gMWEQ8uKz6XUAAAAGVJREFUWMPt17ENwCAMBVDv/it0S0ZghYjU7pE6XfIdf8mS0vM8r3O+f6yZ68fV7fO8Z65vX96fK4D1S8fV7fO8Z65vX96fK4D1S8fV7fO8Z65vX96fK4D1S8fV7fO8Z65vX96fK4D1S8eX86fWAg9G9v5uG6KAAAAAAElFTkSuQmCC');
     background-color: #3498db;
     border: 2px solid #2980b9;
@@ -63,8 +116,6 @@ body {
 }
 
 #enemy-sprite {
-    /* Pixel Art Slime Placeholder */
-    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5gMWEQ8uKz6XUAAAAGVJREFUWMPt17ENwCAMBVDv/it0S0ZghYjU7pE6XfIdf8mS0vM8r3O+f6yZ68fV7fO8Z65vX96fK4D1S8fV7fO8Z65vX96fK4D1S8fV7fO8Z65vX96fK4D1S8fV7fO8Z65vX96fK4D1S8eX86fWAg9G9v5uG6KAAAAAAElFTkSuQmCC');
     background-color: #27ae60;
     border: 2px solid #2ecc71;
     border-radius: 50%;
@@ -87,9 +138,7 @@ body {
     transition: width 0.3s ease-out;
 }
 
-#player-hp-bar-inner {
-    background-color: #2ecc71;
-}
+#player-hp-bar-inner { background-color: #2ecc71; }
 
 #enemy-hp-text, #player-hp-text {
     position: absolute;
@@ -103,56 +152,120 @@ body {
     z-index: 10;
 }
 
-#battle-log {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    right: 20px;
-    height: 100px;
-    background-color: rgba(0,0,0,0.6);
-    padding: 10px;
-    overflow-y: auto;
-    font-size: 14px;
+/* Painel de Inventário e Slots */
+#inventory-panel {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+    background-color: #34495e;
+    border: 2px solid #7f8c8d;
     border-radius: 4px;
-    border: 1px solid #ecf0f1;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
 }
 
+#inventory-panel h3 {
+    font-size: 14px;
+    margin: 10px 0 5px 0;
+    text-align: center;
+    color: #bdc3c7;
+    border-bottom: 1px solid #7f8c8d;
+}
+
+.equip-slots {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.slot {
+    width: 50px;
+    height: 50px;
+    background-color: #2c3e50;
+    border: 2px solid #95a5a6;
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.slot:hover { border-color: #f1c40f; }
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.item-slot {
+    width: 100%;
+    aspect-ratio: 1;
+    background-color: #2c3e50;
+    border: 2px solid #7f8c8d;
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.item-slot:hover { transform: scale(1.1); z-index: 5; }
+
+/* Raridades */
+.common { border-color: #95a5a6 !important; box-shadow: inset 0 0 5px #95a5a6; }
+.uncommon { border-color: #2ecc71 !important; box-shadow: inset 0 0 5px #2ecc71; }
+.rare { border-color: #3498db !important; box-shadow: inset 0 0 5px #3498db; }
+.epic { border-color: #9b59b6 !important; box-shadow: inset 0 0 8px #9b59b6; }
+.legendary { border-color: #f1c40f !important; box-shadow: inset 0 0 10px #f1c40f; }
+
+.item-slot:hover { border-color: #ecf0f1; }
+
+/* Log de Batalha */
+#battle-log {
+    grid-column: 1;
+    grid-row: 3;
+    background-color: rgba(0,0,0,0.8);
+    border: 2px solid #7f8c8d;
+    border-radius: 4px;
+    padding: 10px;
+    overflow-y: auto;
+    font-size: 13px;
+}
+
+/* Controles */
 #ui-controls {
     position: absolute;
     top: 50%;
-    left: 50%;
+    left: 40%;
     transform: translate(-50%, -50%);
     z-index: 100;
 }
 
 #restart-btn {
-    padding: 10px 20px;
-    font-size: 16px;
+    padding: 15px 30px;
+    font-size: 18px;
     background-color: #e67e22;
     color: white;
-    border: none;
-    border-radius: 4px;
+    border: 4px solid #d35400;
+    border-radius: 8px;
     cursor: pointer;
     font-family: inherit;
     font-weight: bold;
 }
 
-#restart-btn:hover {
-    background-color: #d35400;
-}
+#restart-btn:hover { background-color: #d35400; }
 
-/* Animações de ataque */
-.attack-player {
-    transform: translateY(-20px);
-}
-
-.attack-enemy {
-    transform: translateY(20px);
-}
-
-.damage-flash {
-    animation: flash 0.1s 3;
-}
+/* Animações */
+.attack-player { transform: translateY(-20px); }
+.attack-enemy { transform: translateY(20px); }
+.damage-flash { animation: flash 0.1s 3; }
 
 @keyframes flash {
     0% { opacity: 1; }
