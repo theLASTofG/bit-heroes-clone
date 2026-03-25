@@ -258,9 +258,12 @@ function updateUI() {
     el('stat-rebirths').textContent = player.rebirths;
 
     if (currentEnemy) {
-        el('enemy-hp-text').textContent = `${formatNumber(Math.max(0, Math.ceil(currentEnemy.hp)))}/${formatNumber(currentEnemy.maxHp)}`;
-        el('enemy-hp-bar-inner').style.width = `${(currentEnemy.hp / currentEnemy.maxHp) * 100}%`;
-        el('enemy-name').textContent = currentEnemy.name;
+        const enemyHp = Number(currentEnemy.hp) || 0;
+        const enemyMaxHp = Number(currentEnemy.maxHp) || 1;
+        el('enemy-hp-text').textContent = `${formatNumber(Math.max(0, Math.ceil(enemyHp)))}/${formatNumber(Math.ceil(enemyMaxHp))}`;
+        const hpPercent = Math.max(0, Math.min(100, (enemyHp / enemyMaxHp) * 100));
+        el('enemy-hp-bar-inner').style.width = `${hpPercent}%`;
+        el('enemy-name').textContent = currentEnemy.name || "Inimigo";
     }
 
     ['weapon', 'armor', 'mount', 'pet'].forEach(type => {
@@ -318,6 +321,7 @@ function getRarityClass(item) {
 }
 
 function formatNumber(num) {
+    if (num === null || num === undefined || isNaN(num)) return "0";
     if (num >= 1e21) return (num / 1e21).toFixed(2) + 'S';
     if (num >= 1e18) return (num / 1e18).toFixed(2) + 'E';
     if (num >= 1e15) return (num / 1e15).toFixed(2) + 'Q';
@@ -325,7 +329,7 @@ function formatNumber(num) {
     if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
     if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
     if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-    return Math.floor(num);
+    return Math.floor(num).toString();
 }
 
 function updateShopUI() {
@@ -476,10 +480,14 @@ function spawnEnemy() {
         else { modName = "FANTASMA "; modStatMult = 3; modLootMult = 15; modColor = "#8e44ad"; }
     }
 
+    const finalHp = Math.max(1, Math.floor((base.hp || 100) * zMult * bMult * modStatMult));
+    const finalAtk = Math.max(1, Math.floor((base.atk || 20) * zMult * bMult * modStatMult));
+    const finalDef = Math.max(1, Math.floor(20 * zMult * modStatMult));
+
     currentEnemy = {
         name: modName + (isBoss ? `BOSS ${base.name.toUpperCase()}` : base.name),
-        hp: Math.floor(base.hp * zMult * bMult * modStatMult), maxHp: Math.floor(base.hp * zMult * bMult * modStatMult),
-        atk: Math.floor(base.atk * zMult * bMult * modStatMult), def: Math.floor(20 * zMult * modStatMult),
+        hp: finalHp, maxHp: finalHp,
+        atk: finalAtk, def: finalDef,
         gold: Math.floor(100 * zMult * bMult * modLootMult), exp: Math.floor(200 * zMult * bMult * modLootMult),
         isBoss, color: modColor || (inDungeon ? (currentDungeonType === 'hell' ? "#ff0000" : "#8e44ad") : base.color), 
         scale: (isBoss ? 1.7 : 1) * modScale, modType: modName.trim()
