@@ -294,16 +294,50 @@ function rollEnchant(slotIndex) {
 
 const tooltip = document.getElementById('tooltip');
 function showTooltip(e, item) {
-    tooltip.style.display = 'block'; tooltip.style.left = (e.pageX + 20) + 'px'; tooltip.style.top = (e.pageY + 20) + 'px'; tooltip.style.borderColor = item.rarity.color;
-    let sHtml = ''; const current = player.equipment[item.type];
+    tooltip.style.display = 'block';
+    tooltip.style.borderColor = item.rarity.color;
+    
+    let sHtml = '';
+    const current = player.equipment[item.type];
     ['atk', 'def', 'hp', 'crit', 'evade', 'lifeSteal'].forEach(s => {
-        const v = item.stats[s] || 0; const cV = current ? (current.stats[s] || 0) : 0;
+        const v = item.stats[s] || 0;
+        const cV = current ? (current.stats[s] || 0) : 0;
         if (v === 0 && cV === 0) return;
         const diff = v - cV;
         const dText = diff > 0 ? `<span class="stat-up">+${diff}</span>` : (diff < 0 ? `<span class="stat-down">${diff}</span>` : `<span style="color:#888">0</span>`);
         sHtml += `<div class="tooltip-stat"><span>${s.toUpperCase()}:</span> <span>${v} (${dText})</span></div>`;
     });
-    tooltip.innerHTML = `<div class="tooltip-header" style="color:${item.rarity.color}">${item.name}</div><div style="font-size:11px; color:#888; margin-bottom:10px;">Raridade: ${item.rarity.name}</div><div style="background:#111; padding:10px; border-radius:5px;">${sHtml}</div><div style="font-size:10px; color:#f1c40f; margin-top:10px; text-align:center;">CLIQUE PARA EQUIPAR</div>`;
+
+    tooltip.innerHTML = `
+        <div class="tooltip-header" style="color:${item.rarity.color}">${item.name}</div>
+        <div style="font-size:11px; color:#888; margin-bottom:8px;">Raridade: ${item.rarity.name}</div>
+        <div style="background:#111; padding:8px; border-radius:5px;">${sHtml}</div>
+        <div style="font-size:10px; color:#f1c40f; margin-top:8px; text-align:center; font-weight:bold;">CLIQUE PARA EQUIPAR</div>
+    `;
+
+    // Posicionamento inteligente (Fixo em relação à viewport)
+    const rect = e.target.getBoundingClientRect();
+    
+    // Forçar reflow para pegar o tamanho correto do tooltip após preencher o conteúdo
+    tooltip.style.visibility = 'hidden';
+    tooltip.style.display = 'block';
+    const tooltipRect = tooltip.getBoundingClientRect();
+    tooltip.style.visibility = 'visible';
+    
+    let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+    let top = rect.top - tooltipRect.height - 15;
+
+    // Ajustes para não sair da tela (Esquerda/Direita)
+    if (left < 20) left = 20;
+    if (left + tooltipRect.width > window.innerWidth - 20) left = window.innerWidth - tooltipRect.width - 20;
+
+    // Ajuste para não sair da tela (Topo/Fundo)
+    if (top < 20) {
+        top = rect.bottom + 15; // Se sair no topo, mostra embaixo do item
+    }
+
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
 }
 function hideTooltip() { tooltip.style.display = 'none'; }
 
