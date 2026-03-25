@@ -9,7 +9,6 @@ const player = {
     // Stats Base
     baseHp: 100,
     baseAtk: 15,
-    baseAgility: 10, // Agilidade determina chance de esquiva e velocidade de ataque
     
     // Stats Calculados
     maxHp: 100,
@@ -20,10 +19,9 @@ const player = {
     evadeChance: 5, // %
     lifeSteal: 0, // %
     
-    equipment: { weapon: null, armor: null, accessory: null },
+    equipment: { weapon: null, armor: null },
     inventory: [],
     
-    // Referências DOM
     elements: {
         hpBar: document.getElementById('player-hp-bar-inner'),
         hpText: document.getElementById('player-hp-text'),
@@ -34,53 +32,50 @@ const player = {
     }
 };
 
-// --- SISTEMA DE ZONAS (PROGRESSÃO) ---
+// --- SISTEMA DE ZONAS ---
 let currentZone = 1;
 let monstersDefeatedInZone = 0;
 const MONSTERS_PER_ZONE = 10;
 
-// --- BANCO DE DADOS DE ITENS (RARIDADES ÚNICAS) ---
+// --- BANCO DE DADOS DE ITENS ---
 const itemDatabase = {
     weapons: [
         { id: 'w1', name: 'Adaga Comum', icon: '🗡️', atk: 5, crit: 2, rarity: 'common' },
         { id: 'w2', name: 'Arco Longo', icon: '🏹', atk: 12, crit: 10, rarity: 'uncommon' },
-        { id: 'w3', name: 'Lâmina Vampírica', icon: '🧛', atk: 20, lifeSteal: 15, rarity: 'rare' },
-        { id: 'w4', name: 'Martelo do Trovão', icon: '⚡', atk: 45, crit: 25, rarity: 'epic' },
-        { id: 'w5', name: 'Excalibur', icon: '✨', atk: 100, crit: 40, lifeSteal: 20, rarity: 'legendary' }
+        { id: 'w3', name: 'Lâmina Vampírica', icon: '🧛', atk: 25, lifeSteal: 15, rarity: 'rare' },
+        { id: 'w4', name: 'Martelo do Trovão', icon: '⚡', atk: 50, crit: 25, rarity: 'epic' },
+        { id: 'w5', name: 'Excalibur', icon: '✨', atk: 120, crit: 40, lifeSteal: 20, rarity: 'legendary' }
     ],
     armors: [
         { id: 'a1', name: 'Túnica Leve', icon: '👕', def: 3, evade: 2, rarity: 'common' },
-        { id: 'a2', name: 'Couro Reforçado', icon: '🧥', def: 8, evade: 5, rarity: 'uncommon' },
-        { id: 'a3', name: 'Manto das Sombras', icon: '🌑', def: 15, evade: 20, rarity: 'rare' },
-        { id: 'a4', name: 'Armadura de Titã', icon: '🧱', def: 40, evade: 10, rarity: 'epic' },
-        { id: 'a5', name: 'Aura Divina', icon: '😇', def: 80, evade: 30, lifeSteal: 10, rarity: 'legendary' }
+        { id: 'a2', name: 'Couro Reforçado', icon: '🧥', def: 10, evade: 5, rarity: 'uncommon' },
+        { id: 'a3', name: 'Manto das Sombras', icon: '🌑', def: 20, evade: 20, rarity: 'rare' },
+        { id: 'a4', name: 'Armadura de Titã', icon: '🧱', def: 50, evade: 10, rarity: 'epic' },
+        { id: 'a5', name: 'Aura Divina', icon: '😇', def: 100, evade: 30, lifeSteal: 10, rarity: 'legendary' }
     ]
 };
 
-// --- MONSTROS E CHEFES ---
 const monsterTypes = [
     { name: "Slime", hpMult: 1.0, atkMult: 1.0, exp: 20, gold: 5, color: "#27ae60", scale: 0.8 },
-    { name: "Globin", hpMult: 1.2, atkMult: 1.3, exp: 35, gold: 12, color: "#d35400", scale: 0.9 },
-    { name: "Esqueleto", hpMult: 1.5, atkMult: 1.5, exp: 60, gold: 25, color: "#ecf0f1", scale: 1.0 },
-    { name: "Orc", hpMult: 2.5, atkMult: 2.0, exp: 120, gold: 50, color: "#16a085", scale: 1.2 }
+    { name: "Globin", hpMult: 1.3, atkMult: 1.3, exp: 40, gold: 15, color: "#d35400", scale: 0.9 },
+    { name: "Esqueleto", hpMult: 1.8, atkMult: 1.6, exp: 70, gold: 30, color: "#ecf0f1", scale: 1.0 },
+    { name: "Orc", hpMult: 3.0, atkMult: 2.2, exp: 150, gold: 60, color: "#16a085", scale: 1.2 }
 ];
 
 let currentEnemy = null;
-let isBattleOver = false;
-let autoBattleInterval = null;
+let isBattleActive = false;
+let currentTurn = 'player'; // 'player' ou 'enemy'
 
-// --- LÓGICA DE CORE ---
+// --- CORE LOGIC ---
 
 function calculateStats() {
-    // Reset para base
-    player.maxHp = player.baseHp + (player.level * 15);
-    player.atk = player.baseAtk + (player.level * 3);
-    player.def = 5 + (player.level * 1);
+    player.maxHp = player.baseHp + (player.level * 20);
+    player.atk = player.baseAtk + (player.level * 4);
+    player.def = 5 + (player.level * 2);
     player.critChance = 5;
     player.evadeChance = 5;
     player.lifeSteal = 0;
 
-    // Aplicar Equipamentos
     Object.values(player.equipment).forEach(item => {
         if (!item) return;
         if (item.atk) player.atk += item.atk;
@@ -93,15 +88,16 @@ function calculateStats() {
 
 function spawnEnemy() {
     const isBoss = (monstersDefeatedInZone + 1) % MONSTERS_PER_ZONE === 0;
-    const typeBase = monsterTypes[Math.min(currentZone - 1, monsterTypes.length - 1)];
+    const typeIndex = Math.min(currentZone - 1, monsterTypes.length - 1);
+    const typeBase = monsterTypes[typeIndex];
     
-    const zoneMult = 1 + (currentZone - 1) * 0.5;
-    const bossMult = isBoss ? 3 : 1;
+    const zoneMult = 1 + (currentZone - 1) * 0.6;
+    const bossMult = isBoss ? 3.5 : 1;
 
     currentEnemy = {
         name: isBoss ? `CHEFE ${typeBase.name.toUpperCase()}` : typeBase.name,
-        maxHp: Math.floor(typeBase.hpMult * 50 * zoneMult * bossMult),
-        atk: Math.floor(typeBase.atkMult * 10 * zoneMult * bossMult),
+        maxHp: Math.floor(typeBase.hpMult * 60 * zoneMult * bossMult),
+        atk: Math.floor(typeBase.atkMult * 12 * zoneMult * bossMult),
         def: Math.floor(5 * zoneMult),
         exp: Math.floor(typeBase.exp * zoneMult * bossMult),
         gold: Math.floor(typeBase.gold * zoneMult * bossMult),
@@ -115,53 +111,71 @@ function spawnEnemy() {
     sprite.style.backgroundColor = currentEnemy.color;
     sprite.style.transform = `scale(${currentEnemy.scale})`;
     
-    document.getElementById('enemy-type').textContent = isBoss ? "BOSS" : "ZONA " + currentZone;
-    document.getElementById('enemy-type').className = `badge ${isBoss ? 'boss' : ''}`;
+    const badge = document.getElementById('enemy-type');
+    badge.textContent = isBoss ? "BOSS" : "ZONA " + currentZone;
+    badge.className = `badge ${isBoss ? 'boss' : ''}`;
 
-    isBattleOver = false;
     updateUI();
     logMessage(`--- Um ${currentEnemy.name} apareceu! ---`);
+    
+    isBattleActive = true;
+    currentTurn = 'player';
+    setTimeout(battleLoop, 1000);
+}
+
+function battleLoop() {
+    if (!isBattleActive) return;
+
+    if (currentTurn === 'player') {
+        performAttack(player, currentEnemy);
+        currentTurn = 'enemy';
+    } else {
+        performAttack(currentEnemy, player);
+        currentTurn = 'player';
+    }
+
+    if (isBattleActive) {
+        setTimeout(battleLoop, 1200); // Delay entre turnos
+    }
 }
 
 function performAttack(attacker, defender) {
-    if (isBattleOver) return;
-
-    const isPlayer = attacker === player;
+    const isPlayerAttacking = attacker === player;
     
     // Lógica de Esquiva
-    const evadeChance = isPlayer ? 0 : player.evadeChance; // Inimigos não esquivam nesta versão simples
+    const evadeChance = isPlayerAttacking ? 0 : player.evadeChance;
     if (Math.random() * 100 < evadeChance) {
-        logMessage(`💨 ${defender.name} ESQUIVOU do ataque!`);
+        logMessage(`💨 ${defender.name} ESQUIVOU!`);
         return;
     }
 
     // Lógica de Crítico
     let damageMult = 1;
     let isCrit = false;
-    if (isPlayer && Math.random() * 100 < player.critChance) {
-        damageMult = 2;
+    if (isPlayerAttacking && Math.random() * 100 < player.critChance) {
+        damageMult = 2.5;
         isCrit = true;
     }
 
-    const variance = Math.random() * 0.3 + 0.85; // 0.85 a 1.15
-    let damage = Math.floor((attacker.atk - (defender.def * 0.4)) * variance * damageMult);
-    damage = Math.max(Math.floor(attacker.atk * 0.2), damage);
+    const variance = Math.random() * 0.3 + 0.85;
+    let damage = Math.floor((attacker.atk - (defender.def * 0.5)) * variance * damageMult);
+    damage = Math.max(Math.floor(attacker.atk * 0.25), damage);
 
     defender.hp -= damage;
     
     // Life Steal
-    if (isPlayer && player.lifeSteal > 0) {
+    if (isPlayerAttacking && player.lifeSteal > 0) {
         const heal = Math.floor(damage * (player.lifeSteal / 100));
         player.hp = Math.min(player.maxHp, player.hp + heal);
-        if (heal > 0) logMessage(`🩸 Life Steal: +${heal} HP`);
     }
 
     // Visual
-    const sprite = isPlayer ? player.elements.sprite : document.getElementById('enemy-sprite');
-    const defSprite = isPlayer ? document.getElementById('enemy-sprite') : player.elements.sprite;
-    sprite.classList.add(isPlayer ? 'attack-player' : 'attack-enemy');
+    const attSprite = isPlayerAttacking ? player.elements.sprite : document.getElementById('enemy-sprite');
+    const defSprite = isPlayerAttacking ? document.getElementById('enemy-sprite') : player.elements.sprite;
+    
+    attSprite.classList.add(isPlayerAttacking ? 'attack-player' : 'attack-enemy');
     setTimeout(() => {
-        sprite.classList.remove(isPlayer ? 'attack-player' : 'attack-enemy');
+        attSprite.classList.remove(isPlayerAttacking ? 'attack-player' : 'attack-enemy');
         defSprite.classList.add('damage-flash');
         setTimeout(() => defSprite.classList.remove('damage-flash'), 200);
     }, 150);
@@ -170,12 +184,12 @@ function performAttack(attacker, defender) {
     updateUI();
 
     if (defender.hp <= 0) {
-        handleVictory(isPlayer);
+        isBattleActive = false;
+        handleVictory(isPlayerAttacking);
     }
 }
 
 function handleVictory(isPlayerWinner) {
-    isBattleOver = true;
     if (isPlayerWinner) {
         logMessage(`✨ Vitória! +${currentEnemy.exp} EXP, +${currentEnemy.gold} Ouro.`);
         player.exp += currentEnemy.exp;
@@ -191,35 +205,33 @@ function handleVictory(isPlayerWinner) {
         checkLevelUp();
         rollLoot();
         
-        // Loop Ocioso: Próxima batalha em 2 segundos
         setTimeout(() => {
-            if (isBattleOver) {
-                player.hp = Math.min(player.maxHp, player.hp + (player.maxHp * 0.2)); // Recupera 20% HP entre lutas
-                spawnEnemy();
-            }
+            player.hp = Math.min(player.maxHp, player.hp + (player.maxHp * 0.3)); // Recupera 30% HP
+            spawnEnemy();
         }, 2000);
     } else {
-        logMessage(`💀 Você morreu. Retornando ao início da Zona...`);
+        logMessage(`💀 Você morreu. Reiniciando Zona...`);
         monstersDefeatedInZone = 0;
         player.hp = player.maxHp;
+        isBattleActive = false;
         setTimeout(spawnEnemy, 3000);
     }
 }
 
 function rollLoot() {
     const chance = Math.random();
-    let dropChance = currentEnemy.isBoss ? 0.8 : 0.15;
+    let dropChance = currentEnemy.isBoss ? 0.9 : 0.2;
     
     if (chance < dropChance) {
         const pool = Math.random() > 0.5 ? itemDatabase.weapons : itemDatabase.armors;
-        let rarityRoll = Math.random() * 100;
+        let r = Math.random() * 100;
         let item;
 
-        if (rarityRoll > 98) item = pool[4]; // Legendary
-        else if (rarityRoll > 90) item = pool[3]; // Epic
-        else if (rarityRoll > 70) item = pool[2]; // Rare
-        else if (rarityRoll > 40) item = pool[1]; // Uncommon
-        else item = pool[0]; // Common
+        if (r > 98) item = pool[4];
+        else if (r > 90) item = pool[3];
+        else if (r > 75) item = pool[2];
+        else if (r > 45) item = pool[1];
+        else item = pool[0];
 
         player.inventory.push({...item});
         logMessage(`🎁 DROP: [${item.rarity.toUpperCase()}] ${item.name}!`);
@@ -231,10 +243,10 @@ function checkLevelUp() {
     if (player.exp >= player.nextLevelExp) {
         player.level++;
         player.exp -= player.nextLevelExp;
-        player.nextLevelExp = Math.floor(player.nextLevelExp * 1.6);
+        player.nextLevelExp = Math.floor(player.nextLevelExp * 1.7);
         calculateStats();
         player.hp = player.maxHp;
-        logMessage(`🎊 LEVEL UP! Você alcançou o nível ${player.level}! 🎊`);
+        logMessage(`🎊 LEVEL UP! Nível ${player.level}! 🎊`);
     }
 }
 
@@ -257,29 +269,32 @@ function equipItem(index) {
 function logMessage(msg) {
     const p = document.createElement('p');
     p.innerHTML = msg;
-    battleLog.appendChild(p);
-    battleLog.scrollTop = battleLog.scrollHeight;
-    if (battleLog.children.length > 50) battleLog.removeChild(battleLog.firstChild);
+    const log = document.getElementById('battle-log');
+    log.appendChild(p);
+    log.scrollTop = log.scrollHeight;
+    if (log.children.length > 40) log.removeChild(log.firstChild);
 }
 
 function updateUI() {
     player.elements.levelText.textContent = player.level;
     player.elements.goldText.textContent = player.gold;
-    player.elements.hpText.textContent = `${Math.ceil(player.hp)}/${player.maxHp}`;
+    player.elements.hpText.textContent = `${Math.max(0, Math.ceil(player.hp))}/${player.maxHp}`;
     player.elements.hpBar.style.width = `${(player.hp / player.maxHp) * 100}%`;
     player.elements.expBar.style.width = `${(player.exp / player.nextLevelExp) * 100}%`;
 
     if (currentEnemy) {
-        document.getElementById('enemy-hp-text').textContent = `${Math.ceil(currentEnemy.hp)}/${currentEnemy.maxHp}`;
+        document.getElementById('enemy-hp-text').textContent = `${Math.max(0, Math.ceil(currentEnemy.hp))}/${currentEnemy.maxHp}`;
         document.getElementById('enemy-hp-bar-inner').style.width = `${(currentEnemy.hp / currentEnemy.maxHp) * 100}%`;
         document.getElementById('enemy-name').textContent = currentEnemy.name;
     }
 
-    // Equip Slots
-    document.getElementById('slot-weapon').textContent = player.equipment.weapon ? player.equipment.weapon.icon : '⚔️';
-    document.getElementById('slot-weapon').className = `slot ${player.equipment.weapon?.rarity || ''}`;
-    document.getElementById('slot-armor').textContent = player.equipment.armor ? player.equipment.armor.icon : '🛡️';
-    document.getElementById('slot-armor').className = `slot ${player.equipment.armor?.rarity || ''}`;
+    const wSlot = document.getElementById('slot-weapon');
+    wSlot.textContent = player.equipment.weapon ? player.equipment.weapon.icon : '⚔️';
+    wSlot.className = `slot ${player.equipment.weapon?.rarity || ''}`;
+    
+    const aSlot = document.getElementById('slot-armor');
+    aSlot.textContent = player.equipment.armor ? player.equipment.armor.icon : '🛡️';
+    aSlot.className = `slot ${player.equipment.armor?.rarity || ''}`;
     
     updateInventoryUI();
 }
@@ -296,23 +311,7 @@ function updateInventoryUI() {
     });
 }
 
-// Loop de Combate Ocioso
-function startAutoBattle() {
-    setInterval(() => {
-        if (!isBattleOver && currentEnemy) {
-            // Turno do Jogador
-            performAttack(player, currentEnemy);
-            
-            // Turno do Inimigo (com pequeno delay)
-            if (!isBattleOver) {
-                setTimeout(() => performAttack(currentEnemy, player), 500);
-            }
-        }
-    }, 1500);
-}
-
 window.onload = () => {
     calculateStats();
     spawnEnemy();
-    startAutoBattle();
 };
