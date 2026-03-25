@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bit Heroes Clone - Web Version</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="battle-scene">
+            <div id="enemy-area" class="entity-area">
+                <div id="enemy-sprite" class="sprite"></div>
+                <div class="hp-bar-container">
+                    <div id="enemy-hp-bar-inner" class="hp-bar"></div>
+                    <span id="enemy-hp-text">100/100</span>
+                </div>
+                <span id="enemy-name">Monstro Selvagem</span>
+            </div>
+
+            <div id="player-area" class="entity-area">
+                <div id="player-sprite" class="sprite"></div>
+                <div class="hp-bar-container">
+                    <div id="player-hp-bar-inner" class="hp-bar"></div>
+                    <span id="player-hp-text">100/100</span>
+                </div>
+                <span id="player-name">Herói Pixel</span>
+            </div>
+
+            <div id="battle-log">
+                <p>A batalha começou!</p>
+            </div>
+        </div>
+        <div id="ui-controls">
+            <button id="restart-btn" style="display:none;">Reiniciar Batalha</button>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
