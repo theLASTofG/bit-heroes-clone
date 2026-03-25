@@ -1,23 +1,23 @@
 // --- SISTEMA DE RARIDADES (20 Tiers!) ---
 const rarities = [
-    { name: "Common", color: "#7f8c8d", weight: 60, bonusMult: 1.0, relicBonus: 5 },
+    { name: "Common", color: "#7f8c8d", weight: 35, bonusMult: 1.0, relicBonus: 5 },
     { name: "Uncommon", color: "#2ecc71", weight: 25, bonusMult: 1.5, relicBonus: 10 },
-    { name: "Rare", color: "#3498db", weight: 10, bonusMult: 2.2, relicBonus: 15 },
-    { name: "Epic", color: "#9b59b6", weight: 4, bonusMult: 3.5, relicBonus: 20 },
-    { name: "Legendary", color: "#f1c40f", weight: 1.2, bonusMult: 6.0, relicBonus: 25 },
-    { name: "Mythic", color: "#e67e22", weight: 0.5, bonusMult: 10.0, relicBonus: 35 },
-    { name: "Celestial", color: "#1abc9c", weight: 0.2, bonusMult: 18.0, relicBonus: 50 },
-    { name: "Void", color: "#8e44ad", weight: 0.08, bonusMult: 30.0, relicBonus: 75 },
-    { name: "Ancient", color: "#c0392b", weight: 0.03, bonusMult: 50.0, relicBonus: 100 },
-    { name: "Godly", color: "#ffffff", weight: 0.01, bonusMult: 100.0, relicBonus: 200 },
-    { name: "Ethereal", color: "#00d2ff", weight: 0.005, bonusMult: 250, relicBonus: 350 },
-    { name: "Infernal", color: "#ff4b2b", weight: 0.002, bonusMult: 500, relicBonus: 600 },
-    { name: "Galactic", color: "#3a1c71", weight: 0.001, bonusMult: 1000, relicBonus: 1200 },
-    { name: "Dimensional", color: "#ee0979", weight: 0.0005, bonusMult: 2500, relicBonus: 3000 },
-    { name: "Universal", color: "#ff00cc", weight: 0.0002, bonusMult: 6000, relicBonus: 8000 },
-    { name: "Eternal", color: "rainbow", weight: 0.0001, bonusMult: 15000, relicBonus: 20000 },
-    { name: "Infinite", color: "#74ebd5", weight: 0.00005, bonusMult: 40000, relicBonus: 55000 },
-    { name: "Omnipotent", color: "#f9d423", weight: 0.00002, bonusMult: 100000, relicBonus: 150000 },
+    { name: "Rare", color: "#3498db", weight: 15, bonusMult: 2.2, relicBonus: 15 },
+    { name: "Epic", color: "#9b59b6", weight: 10, bonusMult: 3.5, relicBonus: 20 },
+    { name: "Legendary", color: "#f1c40f", weight: 6, bonusMult: 6.0, relicBonus: 25 },
+    { name: "Mythic", color: "#e67e22", weight: 4, bonusMult: 10.0, relicBonus: 35 },
+    { name: "Celestial", color: "#1abc9c", weight: 2.5, bonusMult: 18.0, relicBonus: 50 },
+    { name: "Void", color: "#8e44ad", weight: 1.5, bonusMult: 30.0, relicBonus: 75 },
+    { name: "Ancient", color: "#c0392b", weight: 0.6, bonusMult: 50.0, relicBonus: 100 },
+    { name: "Godly", color: "#ffffff", weight: 0.25, bonusMult: 100.0, relicBonus: 200 },
+    { name: "Ethereal", color: "#00d2ff", weight: 0.1, bonusMult: 250, relicBonus: 350 },
+    { name: "Infernal", color: "#ff4b2b", weight: 0.04, bonusMult: 500, relicBonus: 600 },
+    { name: "Galactic", color: "#3a1c71", weight: 0.01, bonusMult: 1000, relicBonus: 1200 },
+    { name: "Dimensional", color: "#ee0979", weight: 0.004, bonusMult: 2500, relicBonus: 3000 },
+    { name: "Universal", color: "#ff00cc", weight: 0.001, bonusMult: 6000, relicBonus: 8000 },
+    { name: "Eternal", color: "rainbow", weight: 0.0004, bonusMult: 15000, relicBonus: 20000 },
+    { name: "Infinite", color: "#74ebd5", weight: 0.0001, bonusMult: 40000, relicBonus: 55000 },
+    { name: "Omnipotent", color: "#f9d423", weight: 0.00004, bonusMult: 100000, relicBonus: 150000 },
     { name: "Manus God", color: "#ff0000", weight: 0.00001, bonusMult: 300000, relicBonus: 500000 },
     { name: "THE END", color: "#000000", weight: 0.000005, bonusMult: 1000000, relicBonus: 2000000 }
 ];
@@ -294,11 +294,13 @@ function updateDropPanel() {
         panel.style.bottom = '180px';
         panel.style.left = '15px';
         panel.style.width = '220px';
-        panel.style.background = 'rgba(0,0,0,0.8)';
+        panel.style.background = 'rgba(0,0,0,0.9)';
         panel.style.border = '1px solid #444';
         panel.style.borderRadius = '8px';
         panel.style.padding = '10px';
         panel.style.fontSize = '10px';
+        panel.style.maxHeight = '250px';
+        panel.style.overflowY = 'auto';
         document.getElementById('game-container').appendChild(panel);
     }
     
@@ -308,18 +310,20 @@ function updateDropPanel() {
     let html = `<h4 style="color:#f1c40f; margin-bottom:5px; text-align:center;">DROPS POSSÍVEIS (${currentEnemy.name})</h4>`;
     
     // Chance de Relíquia
-    const relicChance = currentEnemy.isBoss ? 40 : 0;
-    if (relicChance > 0) html += `<div style="display:flex; justify-content:space-between; margin-bottom:2px;"><span>💠 Relíquia</span> <span style="color:#00d2ff">${relicChance}%</span></div>`;
+    const relicChance = currentEnemy.isBoss ? 60 : 10;
+    html += `<div style="display:flex; justify-content:space-between; margin-bottom:2px;"><span>💠 Relíquia</span> <span style="color:#00d2ff">${relicChance}%</span></div>`;
     
     // Chance de Item
-    const itemBaseChance = currentEnemy.isBoss ? 100 : 40;
     html += `<div style="border-top:1px solid #333; margin:5px 0; padding-top:5px;"></div>`;
     
-    rarities.slice(0, 15).forEach(r => {
-        let chance = (r.weight * luck);
-        if (chance > 100) chance = 100;
-        if (chance < 0.00001) return;
-        html += `<div style="display:flex; justify-content:space-between; margin-bottom:1px;"><span style="color:${r.color === 'rainbow' ? '#fff' : r.color}">${r.name}</span> <span>${chance.toFixed(4)}%</span></div>`;
+    // Calcular chances reais
+    const totalWeight = rarities.reduce((acc, r) => acc + r.weight, 0);
+    rarities.forEach(r => {
+        let baseChance = (r.weight / totalWeight) * 100;
+        let actualChance = baseChance * luck;
+        if (actualChance > 100) actualChance = 100;
+        if (actualChance < 0.000001) return;
+        html += `<div style="display:flex; justify-content:space-between; margin-bottom:1px;"><span style="color:${r.color === 'rainbow' ? '#fff' : r.color}">${r.name}</span> <span>${actualChance.toFixed(4)}%</span></div>`;
     });
     
     panel.innerHTML = html;
@@ -552,16 +556,17 @@ function handleVictory(isPlayer) {
 function rollLoot(guaranteedSuperRarity = false) {
     if (!currentEnemy) return;
     
-    // Chance de Relíquia Aumentada
-    const relicLuck = currentEnemy.isBoss ? 0.4 : 0.05;
+    // Chance de Relíquia Aumentada (Bosses dropam muito mais agora!)
+    const relicLuck = currentEnemy.isBoss ? 0.6 : 0.1;
     if (Math.random() < relicLuck) {
         const relic = generateRelic();
         player.inventory.push(relic);
         logMessage(`💠 RELÍQUIA: <span class="${getRarityClass(relic)}">[${relic.rarity.name}] ${relic.name}</span>`);
     }
 
-    let chance = currentEnemy.isBoss ? 1.0 : 0.4;
-    if (Math.random() < chance) {
+    // Chance de Item (Bosses dropam 2 itens garantidos, normais dropam 50%)
+    const itemRolls = currentEnemy.isBoss ? 2 : (Math.random() < 0.5 ? 1 : 0);
+    for (let i = 0; i < itemRolls; i++) {
         const item = generateItem(null, guaranteedSuperRarity ? rarities[15] : null);
         player.inventory.push(item);
         logMessage(`🎁 DROP: <span class="${getRarityClass(item)}">[${item.rarity.name}] ${item.name}</span>`);
@@ -663,7 +668,7 @@ function buyUpgrade(stat, base, scale) {
     if (player.gold >= cost) { 
         player.gold -= cost; 
         player.upgrades[stat]++; 
-        if (stat === 'luck') player.luck += 0.5; 
+        if (stat === 'luck') player.luck *= 1.1; // Sorte escala exponencialmente agora!
         calculateStats(); updateUI(); 
         logMessage(`🔥 Upgrade ${stat.toUpperCase()}!`); 
     } else {
