@@ -7,6 +7,15 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- SIDEBAR DE DROPS -->
+    <div id="drop-sidebar" class="sidebar closed">
+        <button id="toggle-sidebar" onclick="toggleSidebar()">📦 DROPS</button>
+        <div id="sidebar-content">
+            <h4 style="color:#f1c40f; margin-bottom:10px; text-align:center; border-bottom:1px solid #444; padding-bottom:5px;">CHANCES DE DROP</h4>
+            <div id="drop-list" style="font-size: 11px; overflow-y: auto; max-height: 80vh;">Buscando inimigo...</div>
+        </div>
+    </div>
+
     <div id="game-container">
         <!-- BARRA SUPERIOR -->
         <div id="top-bar">

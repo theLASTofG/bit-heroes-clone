@@ -325,31 +325,42 @@ function updateEnchantUI() {
 
 function switchView(view) { currentView = view; updateUI(); }
 
+function toggleSidebar() {
+    const sidebar = document.getElementById('drop-sidebar');
+    sidebar.classList.toggle('closed');
+}
+
 function updateDropPanel() {
-    let panel = document.getElementById('drop-panel');
-    if (!panel) {
-        panel = document.createElement('div'); panel.id = 'drop-panel';
-        panel.style.position = 'absolute'; panel.style.bottom = '15px'; panel.style.left = '15px';
-        panel.style.width = '230px'; panel.style.background = 'rgba(0,0,0,0.95)';
-        panel.style.border = '1px solid #f1c40f'; panel.style.borderRadius = '8px';
-        panel.style.padding = '10px'; panel.style.fontSize = '10px';
-        panel.style.maxHeight = '200px'; panel.style.overflowY = 'auto';
-        panel.style.zIndex = '10';
-        document.getElementById('game-container').appendChild(panel);
-    }
-    if (!currentEnemy) { panel.innerHTML = 'Buscando inimigo...'; return; }
+    const list = document.getElementById('drop-list');
+    if (!list) return;
+    
+    if (!currentEnemy) { list.innerHTML = 'Buscando inimigo...'; return; }
+    
     const luck = (player.luck + temporaryLuck) * player.rebirthUpgrades.luckMult;
-    let html = `<h4 style="color:#f1c40f; margin-bottom:5px; text-align:center;">DROPS POSSÍVEIS</h4>`;
+    let html = '';
+    
+    const relicChance = currentEnemy.isBoss ? 60 : 10;
+    html += `<div style="display:flex; justify-content:space-between; margin-bottom:5px; background:rgba(0,210,255,0.1); padding:2px 5px; border-radius:3px;"><span>💠 Relíquia</span> <span style="color:#00d2ff">${relicChance}%</span></div>`;
+    html += `<div style="border-top:1px solid #333; margin:8px 0;"></div>`;
+    
     const totalWeight = rarities.reduce((acc, r) => acc + r.weight, 0);
     const luckFactor = Math.pow(luck, 0.7); 
+
     rarities.forEach((r, idx) => {
         let baseChance = (r.weight / totalWeight) * 100;
         let actualChance = (idx === 0) ? Math.max(1, baseChance / luckFactor) : baseChance * luckFactor;
+        
         if (actualChance > 100) actualChance = 100;
         if (actualChance < 0.000001) return;
-        html += `<div style="display:flex; justify-content:space-between; margin-bottom:1px;"><span style="color:${r.color === 'rainbow' ? '#fff' : r.color}">${r.name}</span> <span>${actualChance.toFixed(4)}%</span></div>`;
+        
+        const isEternal = r.color === 'rainbow';
+        html += `<div style="display:flex; justify-content:space-between; margin-bottom:2px; padding:0 5px;">
+                    <span style="color:${isEternal ? '#fff' : r.color}; ${isEternal ? 'text-shadow: 0 0 5px #fff;' : ''}">${r.name}</span> 
+                    <span style="font-family:monospace;">${actualChance.toFixed(4)}%</span>
+                 </div>`;
     });
-    panel.innerHTML = html;
+    
+    list.innerHTML = html;
 }
 
 function sellAll() {
