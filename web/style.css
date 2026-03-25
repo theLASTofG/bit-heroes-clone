@@ -48,6 +48,7 @@ body {
     border: 2px solid #444;
     border-radius: 8px;
     padding: 15px;
+    overflow-y: auto;
 }
 
 #left-panel h3 { font-size: 14px; color: #f1c40f; margin-bottom: 15px; text-align: center; border-bottom: 1px solid #333; padding-bottom: 5px; }
@@ -69,7 +70,6 @@ body {
 
 .entity-area { display: flex; flex-direction: column; align-items: center; gap: 10px; position: relative; width: 100%; }
 .sprite { width: 80px; height: 80px; background-color: #444; border: 4px solid #fff; border-radius: 8px; transition: transform 0.1s, background-color 0.2s; }
-.mount-sprite { position: absolute; width: 100px; height: 40px; background: rgba(255,255,255,0.1); bottom: 45px; border-radius: 50%; z-index: -1; }
 
 .hp-bar-container { width: 200px; height: 20px; background: #333; border: 2px solid #000; border-radius: 10px; position: relative; overflow: hidden; }
 .hp-bar { height: 100%; background: #e74c3c; width: 100%; transition: width 0.2s; }
@@ -93,7 +93,7 @@ body {
 .panel-section { background: #111; border: 1px solid #333; border-radius: 6px; padding: 8px; }
 .panel-section h3 { font-size: 11px; color: #888; margin-bottom: 8px; text-align: center; }
 
-.equip-slots { display: flex; justify-content: space-around; gap: 5px; }
+.equip-slots { display: flex; justify-content: space-around; gap: 5px; flex-wrap: wrap; }
 .slot {
     width: 45px;
     height: 45px;
@@ -129,31 +129,38 @@ body {
     font-size: 20px;
     cursor: pointer;
 }
-.item-slot:hover { border-color: #aaa; }
 
-/* RARIDADES */
+/* RARIDADES CORES E EFEITOS */
 .common { border-color: #7f8c8d; }
-.uncommon { border-color: #2ecc71; }
-.rare { border-color: #3498db; }
-.epic { border-color: #9b59b6; }
-.legendary { border-color: #f1c40f; box-shadow: inset 0 0 10px rgba(241,196,15,0.3); }
-.mythic { border-color: #e67e22; box-shadow: inset 0 0 10px rgba(230,126,34,0.5); }
-.celestial { border-color: #1abc9c; animation: glow-celestial 2s infinite; }
-.void { border-color: #8e44ad; background: #000; box-shadow: 0 0 15px #8e44ad; }
+.uncommon { border-color: #2ecc71; box-shadow: 0 0 5px #2ecc71; }
+.rare { border-color: #3498db; box-shadow: 0 0 8px #3498db; }
+.epic { border-color: #9b59b6; box-shadow: 0 0 10px #9b59b6; }
+.legendary { border-color: #f1c40f; box-shadow: 0 0 12px #f1c40f; animation: pulse 2s infinite; }
+.mythic { border-color: #e67e22; box-shadow: 0 0 15px #e67e22; }
+.celestial { border-color: #1abc9c; box-shadow: 0 0 18px #1abc9c; }
+.void { border-color: #8e44ad; background: #000; box-shadow: 0 0 20px #8e44ad; }
 .ancient { border-color: #c0392b; animation: pulse-red 1.5s infinite; }
-.godly { border-color: #ffffff; box-shadow: 0 0 20px #fff; }
-
-/* NOVAS RARIDADES APELONAS */
-.ethereal { border-color: #00d2ff; box-shadow: 0 0 25px #00d2ff; }
-.infernal { border-color: #ff4b2b; box-shadow: 0 0 30px #ff4b2b; }
-.galactic { border-color: #3a1c71; background: linear-gradient(45deg, #3a1c71, #d76d77); }
+.godly { border-color: #ffffff; box-shadow: 0 0 25px #fff; }
+.ethereal { border-color: #00d2ff; box-shadow: 0 0 30px #00d2ff; }
+.infernal { border-color: #ff4b2b; box-shadow: 0 0 35px #ff4b2b; }
+.galactic { border-color: #3a1c71; background: linear-gradient(45deg, #3a1c71, #d76d77); box-shadow: 0 0 40px #3a1c71; }
 .dimensional { border-color: #ee0979; animation: dimensional-shift 3s infinite; }
-.universal { border-color: #ff00cc; box-shadow: 0 0 40px #ff00cc; }
-.eternal { border-color: #00f2fe; background: #000; border-style: double; }
+.universal { border-color: #ff00cc; box-shadow: 0 0 50px #ff00cc; }
+.eternal { border-width: 3px; animation: rgb-glow 3s infinite linear; }
 .infinite { border-color: #74ebd5; animation: infinite-glow 4s infinite; }
-.omnipotent { border-color: #f9d423; box-shadow: 0 0 50px #f9d423; border-width: 4px; }
-.manus-god { border-color: #ff0000; background: #000; box-shadow: 0 0 60px #ff0000; border-width: 5px; }
-.the-end { border-color: #000; background: #fff; color: #000; box-shadow: 0 0 100px #fff; }
+.omnipotent { border-color: #f9d423; box-shadow: 0 0 70px #f9d423; border-width: 4px; }
+.manus-god { border-color: #ff0000; background: #000; box-shadow: 0 0 80px #ff0000; border-width: 5px; }
+.the-end { border-color: #000; background: #fff; color: #000; box-shadow: 0 0 100px #fff; border-width: 6px; }
+
+/* ANIMAÇÕES DE RARIDADE */
+@keyframes rgb-glow {
+    0% { border-color: #ff0000; box-shadow: 0 0 15px #ff0000; }
+    33% { border-color: #00ff00; box-shadow: 0 0 15px #00ff00; }
+    66% { border-color: #0000ff; box-shadow: 0 0 15px #0000ff; }
+    100% { border-color: #ff0000; box-shadow: 0 0 15px #ff0000; }
+}
+
+.eternal-glow { animation: rgb-glow 3s infinite linear !important; }
 
 /* LOG DE BATALHA */
 #battle-log {
@@ -166,8 +173,6 @@ body {
     overflow-y: auto;
     color: #aaa;
 }
-#battle-log p { margin-bottom: 4px; border-bottom: 1px solid #1a1a1a; }
-#battle-log span { font-weight: bold; }
 
 /* SHOP */
 .shop-btn {
@@ -180,8 +185,9 @@ body {
     font-size: 11px;
     cursor: pointer;
     border-radius: 4px;
+    transition: filter 0.2s;
 }
-.shop-btn:hover { background: #34495e; }
+.shop-btn:hover { filter: brightness(1.2); }
 
 /* TOOLTIP */
 .tooltip {
@@ -195,20 +201,15 @@ body {
     pointer-events: none;
     box-shadow: 0 10px 30px rgba(0,0,0,0.8);
 }
-.tooltip-header { font-size: 16px; font-weight: bold; margin-bottom: 5px; text-align: center; }
-.tooltip-stat { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
-.stat-up { color: #2ecc71; }
-.stat-down { color: #e74c3c; }
 
-/* ANIMAÇÕES */
+/* ANIMAÇÕES GERAIS */
 @keyframes attack-player { 0% { transform: translateX(0); } 50% { transform: translateX(50px); } 100% { transform: translateX(0); } }
 @keyframes attack-enemy { 0% { transform: translateX(0); } 50% { transform: translateX(-50px); } 100% { transform: translateX(0); } }
 .attack-player { animation: attack-player 0.15s; }
 .attack-enemy { animation: attack-enemy 0.15s; }
 .damage-flash { background-color: #ff0000 !important; transform: scale(1.1); }
 
-@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-@keyframes glow-celestial { 0% { box-shadow: 0 0 5px #1abc9c; } 50% { box-shadow: 0 0 20px #1abc9c; } 100% { box-shadow: 0 0 5px #1abc9c; } }
+@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 @keyframes pulse-red { 0% { border-color: #c0392b; } 50% { border-color: #ff0000; box-shadow: 0 0 15px #ff0000; } 100% { border-color: #c0392b; } }
 @keyframes dimensional-shift { 0% { transform: skew(0deg); } 25% { transform: skew(5deg); } 75% { transform: skew(-5deg); } 100% { transform: skew(0deg); } }
 @keyframes infinite-glow { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
