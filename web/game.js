@@ -36,27 +36,24 @@ const itemIcons = {
     pet: ["💧", "🧚", "🐲", "🐱", "🤖", "👻", "😈", "👼"]
 };
 
-// --- SISTEMA DE RELÍQUIAS ---
-const relicTemplates = [
-    { name: "Heart of Fire", icon: "💎", stat: "atk" },
-    { name: "Eternal Soul", icon: "🧿", stat: "hp" },
-    { name: "Ancient Shield", icon: "🛡️", stat: "def" },
-    { name: "Void Eye", icon: "👁️", stat: "crit" },
-    { name: "Ghost Wing", icon: "🕊️", stat: "evade" }
-];
-
-// --- SISTEMA DE ENCANTAMENTOS ---
-const enchantStats = [
-    { id: 'atk', name: 'Ataque', icon: '⚔️', base: 10 },
-    { id: 'hp', name: 'Vida', icon: '❤️', base: 100 },
-    { id: 'crit', name: 'Crítico', icon: '💥', base: 2 },
-    { id: 'evade', name: 'Esquiva', icon: '💨', base: 2 },
-    { id: 'lifeSteal', name: 'Roubo de Vida', icon: '🩸', base: 1 },
-    { id: 'doubleAtk', name: 'Atk Duplo', icon: '⚡', base: 1 },
-    { id: 'tripleAtk', name: 'Atk Triplo', icon: '🔥', base: 0.5 },
-    { id: 'thorns', name: 'Espinhos', icon: '🌵', base: 5 },
-    { id: 'speed', name: 'Velocidade', icon: '👟', base: 5 }
-];
+// --- ÁRVORE DE TALENTOS ---
+const talents = {
+    assassin: [
+        { id: 'crit_dmg', name: 'Dano Crítico', desc: '+20% Dano Crítico por ponto', max: 5, cost: 1 },
+        { id: 'double_chance', name: 'Mestre do Combo', desc: '+5% Chance Atk Duplo', max: 5, cost: 2 },
+        { id: 'triple_chance', name: 'Fúria Divina', desc: '+2% Chance Atk Triplo', max: 5, cost: 3 }
+    ],
+    paladin: [
+        { id: 'thorns_buff', name: 'Pele de Ferro', desc: '+50% Dano de Espinhos', max: 5, cost: 1 },
+        { id: 'def_res', name: 'Resiliência', desc: '+10% Defesa Absoluta', max: 5, cost: 2 },
+        { id: 'lifesteal_buff', name: 'Sanguessuga', desc: '+5% Roubo de Vida', max: 5, cost: 3 }
+    ],
+    god: [
+        { id: 'luck_buff', name: 'Benção de Manus', desc: '+50% Sorte Final', max: 5, cost: 2 },
+        { id: 'exp_buff', name: 'Sabedoria Ancestral', desc: '+100% Ganho de EXP', max: 5, cost: 2 },
+        { id: 'drop_buff', name: 'Mãos de Ouro', desc: '+20% Chance de Item Raro', max: 5, cost: 5 }
+    ]
+};
 
 // --- JOGADOR ---
 const player = {
@@ -66,22 +63,19 @@ const player = {
     crit: 5, evade: 5, lifeSteal: 0, goldBonus: 0, expBonus: 0,
     doubleAtk: 0, tripleAtk: 0, thorns: 0, speed: 100, luck: 2.0, powerRating: 0,
     
-    rebirths: 0, rebirthPoints: 0,
+    rebirths: 0, rebirthPoints: 0, talentPoints: 0,
+    talentsOwned: {}, // { talentId: level }
     rebirthUpgrades: { atkMult: 1, hpMult: 1, luckMult: 1, expMult: 1 },
 
     equipment: { weapon: null, armor: null, mount: null, pet: null },
     relics: [null, null, null, null, null],
     inventory: [],
     enchants: Array(10).fill(null),
-    upgrades: { atk: 0, hp: 0, luck: 0 }
+    upgrades: { atk: 0, hp: 0, luck: 0 },
+    debuffs: [] // { id, name, duration, type, value }
 };
 
-// --- MASMORRAS ---
-let inDungeon = false;
-let dungeonFloor = 0;
-let currentDungeonType = "normal";
-const MAX_DUNGEON_FLOORS = 10;
-
+// --- INIMIGOS ---
 const monsterBases = [
     { name: "Slime", color: "#27ae60", hp: 100, atk: 20 },
     { name: "Bat", color: "#34495e", hp: 150, atk: 30 },
@@ -90,6 +84,12 @@ const monsterBases = [
     { name: "Demon", color: "#c0392b", hp: 1000, atk: 150 },
     { name: "Void Stalker", color: "#000", hp: 5000, atk: 500 },
     { name: "God Slayer", color: "#f1c40f", hp: 25000, atk: 2000 }
+];
+
+const enemyDebuffs = [
+    { id: 'bleed', name: '🩸 SANGRAMENTO', desc: 'Dano por turno', chance: 15 },
+    { id: 'stun', name: '💫 ATORDOADO', desc: 'Pula turno', chance: 10 },
+    { id: 'curse', name: '💀 AMALDIÇOADO', desc: 'Reduz Sorte e Defesa', chance: 8 }
 ];
 
 let currentEnemy = null;
@@ -115,8 +115,19 @@ function calculateStats() {
     let totalTripleAtk = 0;
     let totalThorns = 0;
     let totalSpeed = 100;
+    let totalCritDmg = 3.5; // Base 3.5x
+
+    // Aplicar Talentos
+    const t = player.talentsOwned;
+    if (t.crit_dmg) totalCritDmg += (t.crit_dmg * 0.2);
+    if (t.double_chance) totalDoubleAtk += (t.double_chance * 5);
+    if (t.triple_chance) totalTripleAtk += (t.triple_chance * 2);
+    if (t.thorns_buff) totalThorns *= (1 + (t.thorns_buff * 0.5));
+    if (t.lifesteal_buff) totalLifeSteal += (t.lifesteal_buff * 5);
+
     player.goldBonus = 0;
     player.expBonus = (player.rebirthUpgrades.expMult - 1) * 100;
+    if (t.exp_buff) player.expBonus += (t.exp_buff * 100);
 
     Object.values(player.equipment).forEach(item => {
         if (!item) return;
@@ -149,34 +160,21 @@ function calculateStats() {
         if (en.stat === 'expBonus') player.expBonus += en.value;
     });
 
-    if (player.equipment.weapon && player.equipment.armor && 
-        player.equipment.weapon.rarity && player.equipment.armor.rarity &&
-        player.equipment.weapon.rarity.name === player.equipment.armor.rarity.name) {
-        totalAtk *= 1.5;
-        totalHp *= 1.5;
-    }
+    let luckMult = player.rebirthUpgrades.luckMult;
+    if (t.luck_buff) luckMult *= (1 + (t.luck_buff * 0.5));
 
-    let atkMult = 1, hpMult = 1, defMult = 1, critMult = 1, evadeMult = 1;
-    player.relics.forEach(relic => {
-        if (!relic) return;
-        const bonus = relic.bonusValue / 100;
-        if (relic.stat === 'atk') atkMult += bonus;
-        if (relic.stat === 'hp') hpMult += bonus;
-        if (relic.stat === 'def') defMult += bonus;
-        if (relic.stat === 'crit') critMult += bonus;
-        if (relic.stat === 'evade') evadeMult += bonus;
-    });
-
-    player.atk = totalAtk * atkMult;
-    player.maxHp = totalHp * hpMult;
-    player.def = totalDef * defMult;
-    player.crit = totalCrit * critMult;
-    player.evade = totalEvade * evadeMult;
+    player.atk = totalAtk * player.rebirthUpgrades.atkMult;
+    player.maxHp = totalHp * player.rebirthUpgrades.hpMult;
+    player.def = totalDef;
+    player.crit = totalCrit;
+    player.evade = totalEvade;
     player.lifeSteal = totalLifeSteal;
     player.doubleAtk = totalDoubleAtk;
     player.tripleAtk = totalTripleAtk;
     player.thorns = totalThorns;
     player.speed = totalSpeed;
+    player.critDmg = totalCritDmg;
+    player.finalLuckMult = luckMult;
 
     player.powerRating = Math.floor((player.atk * 2) + (player.maxHp / 5) + (player.def * 3) + (player.crit * 50) + (player.evade * 50) + (player.doubleAtk * 100) + (player.tripleAtk * 500) + (player.thorns * 5) + (player.speed * 2));
 }
@@ -198,7 +196,7 @@ function updateUI() {
     el('stat-crit').textContent = player.crit.toFixed(1) + "%";
     el('stat-evade').textContent = player.evade.toFixed(1) + "%";
     el('stat-lifesteal').textContent = player.lifeSteal.toFixed(1) + "%";
-    el('stat-luck').textContent = (player.luck * player.rebirthUpgrades.luckMult).toFixed(1) + "x";
+    el('stat-luck').textContent = (player.luck * player.finalLuckMult).toFixed(1) + "x";
     el('stat-pr').textContent = formatNumber(player.powerRating);
     
     if (!el('stat-double')) {
@@ -210,7 +208,7 @@ function updateUI() {
             { id: 'stat-thorns', label: '🌵 ESPINHOS', color: '#fff' },
             { id: 'stat-speed', label: '👟 VELOCIDADE', color: '#fff' }
         ];
-        rows.forEach((r, i) => {
+        rows.forEach(r => {
             const div = document.createElement('div');
             div.className = 'stat-row';
             if (r.color) div.style.color = r.color;
@@ -255,10 +253,29 @@ function updateUI() {
     });
 
     if (currentView === 'shop') updateShopUI();
-    else updateEnchantUI();
+    else if (currentView === 'enchant') updateEnchantUI();
+    else if (currentView === 'talents') updateTalentsUI();
     
     updateInventoryUI();
     updateDropPanel();
+    updateDebuffsUI();
+}
+
+function updateDebuffsUI() {
+    const container = document.getElementById('player-area');
+    let debuffList = document.getElementById('debuff-list');
+    if (!debuffList) {
+        debuffList = document.createElement('div');
+        debuffList.id = 'debuff-list';
+        debuffList.style.position = 'absolute';
+        debuffList.style.top = '-40px';
+        debuffList.style.left = '50%';
+        debuffList.style.transform = 'translateX(-50%)';
+        debuffList.style.display = 'flex';
+        debuffList.style.gap = '5px';
+        container.appendChild(debuffList);
+    }
+    debuffList.innerHTML = player.debuffs.map(d => `<span title="${d.name}" style="font-size:18px;">${d.id === 'bleed' ? '🩸' : d.id === 'stun' ? '💫' : '💀'}</span>`).join('');
 }
 
 function getRarityClass(item) {
@@ -283,7 +300,6 @@ function updateShopUI() {
     const atkCost = 100 + player.upgrades.atk * 200;
     const hpCost = 100 + player.upgrades.hp * 200;
     const luckCost = 1000 + player.upgrades.luck * 2000;
-    const canRebirth = player.level >= 100;
     shop.innerHTML = `
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px;">
             <button class="shop-btn" onclick="buyUpgrade('atk', 100, 200)">ATK (💰${formatNumber(atkCost)})</button>
@@ -295,10 +311,47 @@ function updateShopUI() {
             <button class="shop-btn" style="background:#c0392b;" onclick="toggleDungeon('hell')">HELL</button>
         </div>
         <button class="shop-btn" style="background:#27ae60; margin-top:5px;" onclick="sellAll()">VENDER TUDO (💰)</button>
-        <button class="shop-btn" style="background:${canRebirth ? '#00d2ff' : '#333'}; margin-top:5px;" onclick="performRebirth()">REBIRTH (LV 100+)</button>
-        <button class="shop-btn" style="background:#f1c40f; color:#000; font-weight:bold;" onclick="showRebirthShop()">LOJA DE REBIRTH (✨${player.rebirthPoints})</button>
-        <button class="shop-btn" style="background:#3498db; margin-top:10px;" onclick="switchView('enchant')">⚙️ ABA DE ENCANTAMENTOS</button>
+        <button class="shop-btn" style="background:#00d2ff; margin-top:5px;" onclick="switchView('talents')">🌳 ÁRVORE DE TALENTOS (✨${player.talentPoints})</button>
+        <button class="shop-btn" style="background:#3498db; margin-top:5px;" onclick="switchView('enchant')">⚙️ ENCANTAMENTOS</button>
+        <button class="shop-btn" style="background:#333; margin-top:5px;" onclick="performRebirth()">REBIRTH (LV 100+)</button>
     `;
+}
+
+function updateTalentsUI() {
+    const shop = document.getElementById('shop-container');
+    let html = `<h3 style="color:#00d2ff; margin-bottom:10px;">TALENTOS (✨${player.talentPoints})</h3>`;
+    
+    Object.keys(talents).forEach(category => {
+        html += `<div style="text-align:left; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">
+                    <strong style="color:#f1c40f; text-transform:uppercase;">${category}</strong></div>`;
+        talents[category].forEach(t => {
+            const level = player.talentsOwned[t.id] || 0;
+            const canAfford = player.talentPoints >= t.cost && level < t.max;
+            html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; background:rgba(255,255,255,0.05); padding:5px; border-radius:4px;">
+                        <div style="font-size:10px; flex:1;">
+                            <strong>${t.name} (${level}/${t.max})</strong><br>
+                            <span style="color:#888">${t.desc}</span>
+                        </div>
+                        <button class="shop-btn" style="width:60px; padding:2px; font-size:10px; background:${canAfford ? '#27ae60' : '#333'}" 
+                                onclick="${canAfford ? `buyTalent('${t.id}', ${t.cost})` : ''}">
+                            ✨${t.cost}
+                        </button>
+                    </div>`;
+        });
+    });
+    
+    html += `<button class="shop-btn" style="background:#333; margin-top:10px;" onclick="switchView('shop')">VOLTAR</button>`;
+    shop.innerHTML = html;
+}
+
+function buyTalent(id, cost) {
+    if (player.talentPoints >= cost) {
+        player.talentPoints -= cost;
+        player.talentsOwned[id] = (player.talentsOwned[id] || 0) + 1;
+        calculateStats();
+        updateUI();
+        logMessage(`🌳 Talento desbloqueado!`);
+    }
 }
 
 function updateEnchantUI() {
@@ -307,59 +360,42 @@ function updateEnchantUI() {
     const cost = 1000 + (player.level * 500);
     shop.innerHTML = `
         <h3 style="color:#3498db; margin-bottom:5px;">ENCANTAMENTOS</h3>
-        <p style="font-size:10px; color:#888; margin-bottom:10px;">Gire para ganhar bônus de Tier 1 a 100!</p>
         <div class="enchant-grid" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:5px; margin-bottom:10px;">
             ${player.enchants.map((en, i) => {
                 const locked = i >= Math.floor(player.level / 5) + 1;
                 return `<div class="enchant-slot ${locked ? 'locked' : ''}" 
                              style="border:2px solid ${en ? en.color : '#444'}; background:#000; aspect-ratio:1; display:flex; align-items:center; justify-content:center; cursor:${locked ? 'not-allowed' : 'pointer'}"
-                             onclick="${locked ? '' : `rollEnchant(${i})`}"
-                             title="${en ? `${en.name}: ${en.statName} +${en.value}` : (locked ? 'Bloqueado (LV '+(i*5)+')' : 'Girar (💰'+formatNumber(cost)+')')}">
+                             onclick="${locked ? '' : `rollEnchant(${i})`}">
                              ${en ? en.icon : (locked ? '🔒' : '✨')}
                         </div>`;
             }).join('')}
         </div>
-        <button class="shop-btn" style="background:#333;" onclick="switchView('shop')">VOLTAR PARA LOJA</button>
+        <button class="shop-btn" style="background:#333;" onclick="switchView('shop')">VOLTAR</button>
     `;
 }
 
 function switchView(view) { currentView = view; updateUI(); }
 
-function toggleSidebar() {
-    const sidebar = document.getElementById('drop-sidebar');
-    sidebar.classList.toggle('closed');
-}
+function toggleSidebar() { document.getElementById('drop-sidebar').classList.toggle('closed'); }
 
 function updateDropPanel() {
     const list = document.getElementById('drop-list');
-    if (!list) return;
-    
-    if (!currentEnemy) { list.innerHTML = 'Buscando inimigo...'; return; }
-    
-    const luck = (player.luck + temporaryLuck) * player.rebirthUpgrades.luckMult;
+    if (!list || !currentEnemy) return;
+    const luck = (player.luck + temporaryLuck) * player.finalLuckMult;
     let html = '';
-    
-    const relicChance = currentEnemy.isBoss ? 60 : 10;
-    html += `<div style="display:flex; justify-content:space-between; margin-bottom:5px; background:rgba(0,210,255,0.1); padding:2px 5px; border-radius:3px;"><span>💠 Relíquia</span> <span style="color:#00d2ff">${relicChance}%</span></div>`;
-    html += `<div style="border-top:1px solid #333; margin:8px 0;"></div>`;
-    
     const totalWeight = rarities.reduce((acc, r) => acc + r.weight, 0);
     const luckFactor = Math.pow(luck, 0.7); 
-
     rarities.forEach((r, idx) => {
         let baseChance = (r.weight / totalWeight) * 100;
         let actualChance = (idx === 0) ? Math.max(1, baseChance / luckFactor) : baseChance * luckFactor;
-        
         if (actualChance > 100) actualChance = 100;
         if (actualChance < 0.000001) return;
-        
         const isEternal = r.color === 'rainbow';
-        html += `<div style="display:flex; justify-content:space-between; margin-bottom:2px; padding:0 5px;">
-                    <span style="color:${isEternal ? '#fff' : r.color}; ${isEternal ? 'text-shadow: 0 0 5px #fff;' : ''}">${r.name}</span> 
-                    <span style="font-family:monospace;">${actualChance.toFixed(4)}%</span>
+        html += `<div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                    <span style="color:${isEternal ? '#fff' : r.color}">${r.name}</span> 
+                    <span>${actualChance.toFixed(4)}%</span>
                  </div>`;
     });
-    
     list.innerHTML = html;
 }
 
@@ -373,34 +409,14 @@ function sellAll() {
 }
 
 function performRebirth() {
-    if (player.level < 100) return;
+    if (player.level < 100) { logMessage(`💀 Nível 100 necessário!`); return; }
     const points = Math.floor(player.level / 100);
-    player.rebirths++; player.rebirthPoints += points;
+    player.rebirths++;
+    player.talentPoints += points;
     player.level = 1; player.exp = 0; player.nextLevelExp = 100; player.gold = 1000;
     player.upgrades = { atk: 0, hp: 0, luck: 0 };
     calculateStats(); player.hp = player.maxHp; updateUI(); spawnEnemy();
-}
-
-function showRebirthShop() {
-    const shop = document.getElementById('shop-container');
-    shop.innerHTML = `
-        <h3 style="color:#00d2ff">REBIRTH SHOP (✨${player.rebirthPoints})</h3>
-        <button class="shop-btn" onclick="buyRebirthUpgrade('atkMult')">ATK x1.5 (✨1)</button>
-        <button class="shop-btn" onclick="buyRebirthUpgrade('hpMult')">HP x1.5 (✨1)</button>
-        <button class="shop-btn" onclick="buyRebirthUpgrade('luckMult')">LUCK x1.5 (✨2)</button>
-        <button class="shop-btn" onclick="buyRebirthUpgrade('expMult')">EXP x2.0 (✨2)</button>
-        <button class="shop-btn" style="background:#444" onclick="updateUI()">VOLTAR</button>
-    `;
-}
-
-function buyRebirthUpgrade(type) {
-    const cost = (type === 'luckMult' || type === 'expMult') ? 2 : 1;
-    if (player.rebirthPoints >= cost) {
-        player.rebirthPoints -= cost;
-        if (type === 'expMult') player.rebirthUpgrades[type] *= 2;
-        else player.rebirthUpgrades[type] *= 1.5;
-        calculateStats(); showRebirthShop();
-    }
+    logMessage(`🔄 REBIRTH! +${points} Pontos de Talento.`);
 }
 
 function toggleDungeon(type = "normal") {
@@ -418,10 +434,9 @@ function spawnEnemy() {
     if (inDungeon) zMult *= (dungeonFloor * (currentDungeonType === 'hell' ? 15 : 4));
     const bMult = isBoss ? (inDungeon ? 20 : 6) : 1;
     
-    // Modificadores de Monstro (Classes)
     let modName = ""; let modColor = null; let modScale = 1; let modStatMult = 1; let modLootMult = 1;
     const rollMod = Math.random();
-    if (!isBoss && rollMod < 0.15) { // 15% chance de modificador
+    if (!isBoss && rollMod < 0.2) { 
         if (rollMod < 0.05) { modName = "GIGANTE "; modScale = 2.2; modStatMult = 5; modLootMult = 20; modColor = "#c0392b"; }
         else if (rollMod < 0.10) { modName = "DOURADO "; modStatMult = 2; modLootMult = 50; modColor = "#f1c40f"; }
         else { modName = "FANTASMA "; modStatMult = 3; modLootMult = 15; modColor = "#8e44ad"; }
@@ -440,8 +455,7 @@ function spawnEnemy() {
     if (sprite) { 
         sprite.style.backgroundColor = currentEnemy.color; 
         sprite.style.transform = `scale(${currentEnemy.scale})`;
-        if (currentEnemy.modType === "FANTASMA") sprite.style.opacity = "0.5";
-        else sprite.style.opacity = "1";
+        sprite.style.boxShadow = `0 0 20px ${currentEnemy.color}`;
     }
     
     isBattleActive = true; currentTurn = 'player'; updateUI();
@@ -450,8 +464,32 @@ function spawnEnemy() {
 
 function battleLoop() {
     if (!isBattleActive || !currentEnemy) return;
-    if (currentTurn === 'player') { performAttack(player, currentEnemy); currentTurn = 'enemy'; }
-    else { performAttack(currentEnemy, player); currentTurn = 'player'; }
+    
+    // Processar Debuffs
+    if (currentTurn === 'player') {
+        const stun = player.debuffs.find(d => d.id === 'stun');
+        if (stun) {
+            logMessage(`💫 Atordoado! Pula turno.`);
+            player.debuffs = player.debuffs.filter(d => d.id !== 'stun');
+            currentTurn = 'enemy';
+        } else {
+            performAttack(player, currentEnemy);
+            currentTurn = 'enemy';
+        }
+    } else {
+        performAttack(currentEnemy, player);
+        currentTurn = 'player';
+    }
+    
+    // Dano de Bleed
+    const bleed = player.debuffs.find(d => d.id === 'bleed');
+    if (bleed) {
+        const bDmg = Math.floor(player.maxHp * 0.05);
+        player.hp -= bDmg;
+        logMessage(`🩸 Sangramento: -${formatNumber(bDmg)}`);
+        if (player.hp <= 0) handleVictory(false);
+    }
+
     if (isBattleActive) battleTimer = setTimeout(battleLoop, Math.max(200, 1000 - (player.speed - 100) * 5));
 }
 
@@ -469,20 +507,23 @@ function performAttack(att, def) {
     for (let i = 0; i < hits; i++) {
         if (def.hp <= 0) break;
         let mult = 1; let crit = false;
-        if (isPlayer && Math.random() * 100 < player.crit) { mult = 3.5; crit = true; }
+        if (isPlayer && Math.random() * 100 < player.crit) { mult = player.critDmg; crit = true; }
         let dmg = Math.floor((att.atk - (def.def * 0.4)) * (Math.random() * 0.2 + 0.9) * mult);
         dmg = Math.max(Math.floor(att.atk * 0.3), dmg);
         def.hp -= dmg;
+        
         if (isPlayer) {
             if (player.lifeSteal > 0) player.hp = Math.min(player.maxHp, player.hp + Math.floor(dmg * (player.lifeSteal / 100)));
-            if (currentEnemy.hp > 0 && player.thorns > 0) { // Thorns passivo
-                // Inimigo toma dano ao ser atacado (simplificado para diversão)
-            }
         } else {
-            if (player.thorns > 0) { // Thorns real: Inimigo toma dano ao te bater
-                const tDmg = player.thorns;
-                currentEnemy.hp -= tDmg;
-                logMessage(`🌵 ESPINHOS: ${formatNumber(tDmg)} dano no inimigo!`);
+            if (player.thorns > 0) { currentEnemy.hp -= player.thorns; logMessage(`🌵 Espinhos: ${formatNumber(player.thorns)}`); }
+            // Inimigo aplica Debuff
+            if (currentZone > 3 || inDungeon) {
+                const roll = Math.random() * 100;
+                const d = enemyDebuffs.find(db => roll < db.chance);
+                if (d && !player.debuffs.find(pd => pd.id === d.id)) {
+                    player.debuffs.push(d);
+                    logMessage(`${d.name} aplicado!`);
+                }
             }
         }
         logMessage(`${crit ? '💥 CRIT! ' : ''}${isPlayer ? 'Você' : att.name} causou ${formatNumber(dmg)} dano.`);
@@ -492,32 +533,23 @@ function performAttack(att, def) {
     const d = isPlayer ? document.getElementById('enemy-sprite') : document.getElementById('player-sprite');
     if (s && d) {
         s.classList.add(isPlayer ? 'attack-player' : 'attack-enemy');
-        setTimeout(() => { 
-            s.classList.remove(isPlayer ? 'attack-player' : 'attack-enemy'); 
-            d.classList.add('damage-flash'); 
-            setTimeout(() => d.classList.remove('damage-flash'), 150); 
-        }, 150);
+        setTimeout(() => { s.classList.remove(isPlayer ? 'attack-player' : 'attack-enemy'); d.classList.add('damage-flash'); setTimeout(() => d.classList.remove('damage-flash'), 150); }, 150);
     }
     updateUI();
     if (def.hp <= 0) { isBattleActive = false; clearTimeout(battleTimer); setTimeout(() => handleVictory(isPlayer), 500); }
 }
 
 function handleVictory(isPlayer) {
+    player.debuffs = []; // Limpa debuffs ao fim da luta
     if (isPlayer) {
         const goldGain = Math.floor(currentEnemy.gold * (1 + player.goldBonus / 100));
         const expGain = Math.floor(currentEnemy.exp * (1 + player.expBonus / 100));
         player.gold += goldGain; player.exp += expGain;
         
-        // Bônus de Modificador
         if (currentEnemy.modType === "GIGANTE") {
-            temporaryLuck += 50;
-            logMessage(`🌟 SORTE GIGANTE: +50 Sorte por 30s!`);
-            clearTimeout(luckTimer);
-            luckTimer = setTimeout(() => { temporaryLuck -= 50; logMessage(`⌛ Sorte Gigante expirou.`); updateUI(); }, 30000);
-        } else if (currentEnemy.modType === "DOURADO") {
-            logMessage(`💰 TESOURO DOURADO: Bônus massivo de ouro!`);
+            temporaryLuck += 50; logMessage(`🌟 SORTE GIGANTE: +50 Sorte por 30s!`);
+            clearTimeout(luckTimer); luckTimer = setTimeout(() => { temporaryLuck -= 50; updateUI(); }, 30000);
         }
-
         if (inDungeon) {
             if (dungeonFloor < MAX_DUNGEON_FLOORS) dungeonFloor++;
             else { inDungeon = false; dungeonFloor = 0; rollLoot(true); }
@@ -536,22 +568,15 @@ function handleVictory(isPlayer) {
 function rollLoot(guaranteedSuperRarity = false) {
     if (!currentEnemy) return;
     const relicLuck = currentEnemy.isBoss ? 0.6 : 0.1;
-    if (Math.random() < relicLuck) {
-        const relic = generateRelic(); player.inventory.push(relic);
-        logMessage(`💠 RELÍQUIA: <span class="${getRarityClass(relic)}">[${relic.rarity.name}] ${relic.name}</span>`);
-    }
+    if (Math.random() < relicLuck) { const relic = generateRelic(); player.inventory.push(relic); }
     const itemRolls = currentEnemy.isBoss ? 2 : (Math.random() < 0.5 ? 1 : 0);
-    for (let i = 0; i < itemRolls; i++) {
-        const item = generateItem(null, guaranteedSuperRarity ? rarities[15] : null);
-        player.inventory.push(item);
-        logMessage(`🎁 DROP: <span class="${getRarityClass(item)}">[${item.rarity.name}] ${item.name}</span>`);
-    }
+    for (let i = 0; i < itemRolls; i++) { const item = generateItem(null, guaranteedSuperRarity ? rarities[15] : null); player.inventory.push(item); }
     updateInventoryUI();
 }
 
 function generateRelic() {
     const template = relicTemplates[Math.floor(Math.random() * relicTemplates.length)];
-    const luck = player.luck * player.rebirthUpgrades.luckMult;
+    const luck = (player.luck + temporaryLuck) * player.finalLuckMult;
     const totalWeight = rarities.reduce((acc, r) => acc + r.weight, 0);
     const luckFactor = Math.pow(luck, 0.7);
     let roll = Math.random() * totalWeight;
@@ -565,7 +590,7 @@ function generateItem(type = null, forcedRarity = null) {
     if (!type) type = ['weapon', 'armor', 'mount', 'pet'][Math.floor(Math.random() * 4)];
     const nameBase = itemBases[type][Math.floor(Math.random() * itemBases[type].length)];
     const icon = itemIcons[type][Math.floor(Math.random() * itemIcons[type].length)];
-    const luck = player.luck * player.rebirthUpgrades.luckMult;
+    const luck = (player.luck + temporaryLuck) * player.finalLuckMult;
     let rarity = forcedRarity;
     if (!rarity) {
         const totalWeight = rarities.reduce((acc, r) => acc + r.weight, 0);
@@ -576,20 +601,10 @@ function generateItem(type = null, forcedRarity = null) {
         for (const r of rarities) { cumulative += r.weight; if (roll <= cumulative) { rarity = r; break; } }
     }
     const m = rarity.bonusMult; const stats = {};
-    if (type === 'weapon') { 
-        stats.atk = Math.floor(50 * m); stats.crit = Math.floor(5 * (1 + Math.log10(m))); 
-        stats.doubleAtk = m > 5 ? Math.min(75, m/2) : 0; // Atk Duplo bufado
-        if (m > 100) stats.tripleAtk = Math.min(50, m/100); // Atk Triplo agora vem em armas lendárias+
-    } else if (type === 'armor') { 
-        stats.def = Math.floor(30 * m); stats.evade = Math.floor(4 * (1 + Math.log10(m))); 
-        stats.thorns = Math.floor(20 * m); // Thorns em armaduras
-    } else if (type === 'mount') { 
-        stats.hp = Math.floor(200 * m); stats.lifeSteal = Math.floor(2 * (1 + Math.log10(m))); 
-        stats.speed = Math.floor(10 * Math.log10(m)); // Speed em montarias
-    } else { // Pet
-        stats.atk = Math.floor(30 * m); stats.hp = Math.floor(100 * m);
-        stats.tripleAtk = m > 50 ? Math.min(30, m/50) : 0; // Pets dão muito Atk Triplo
-    }
+    if (type === 'weapon') { stats.atk = Math.floor(50 * m); stats.crit = Math.floor(5 * (1 + Math.log10(m))); stats.doubleAtk = m > 5 ? Math.min(75, m/2) : 0; if (m > 100) stats.tripleAtk = Math.min(50, m/100); }
+    else if (type === 'armor') { stats.def = Math.floor(30 * m); stats.evade = Math.floor(4 * (1 + Math.log10(m))); stats.thorns = Math.floor(20 * m); }
+    else if (type === 'mount') { stats.hp = Math.floor(200 * m); stats.lifeSteal = Math.floor(2 * (1 + Math.log10(m))); stats.speed = Math.floor(10 * Math.log10(m)); }
+    else { stats.atk = Math.floor(30 * m); stats.hp = Math.floor(100 * m); stats.tripleAtk = m > 50 ? Math.min(30, m/50) : 0; }
     return { id: Math.random().toString(36).substr(2, 9), name: `${rarity.name} ${nameBase}`, icon, type, rarity, stats };
 }
 
@@ -622,7 +637,6 @@ function checkLevelUp() {
 function showTooltip(e, item) {
     const tooltip = document.getElementById('tooltip'); if (!tooltip) return;
     tooltip.style.display = 'block'; tooltip.style.borderColor = (item.rarity.color === 'rainbow') ? '#fff' : (item.rarity.color || '#fff');
-    if (item.rarity.color === 'rainbow') tooltip.classList.add('eternal-glow'); else tooltip.classList.remove('eternal-glow');
     let sHtml = '';
     if (item.type === 'relic') sHtml = `<div class="tooltip-stat"><span>BÔNUS:</span> <span class="stat-up">+${item.bonusValue}% ${item.stat.toUpperCase()}</span></div>`;
     else if (item.stats) {
@@ -634,13 +648,8 @@ function showTooltip(e, item) {
             sHtml += `<div class="tooltip-stat"><span>${s.toUpperCase()}:</span> <span>${formatNumber(v)} (${dText})</span></div>`;
         });
     }
-    tooltip.innerHTML = `<div class="tooltip-header" style="color:${item.rarity.color === 'rainbow' ? '#fff' : item.rarity.color}">${item.name}</div><div style="font-size:11px; color:#888; margin-bottom:10px;">Tipo: ${item.type.toUpperCase()}</div><div style="background:#111; padding:10px; border-radius:5px;">${sHtml}</div><div style="font-size:10px; color:#f1c40f; margin-top:10px; text-align:center;">CLIQUE PARA EQUIPAR</div>`;
-    const rect = e.target.getBoundingClientRect(); tooltip.style.visibility = 'hidden'; tooltip.style.display = 'block'; 
-    const tRect = tooltip.getBoundingClientRect(); tooltip.style.visibility = 'visible';
-    let left = rect.left + (rect.width / 2) - (tRect.width / 2); let top = rect.top - tRect.height - 15;
-    if (left < 20) left = 20; if (left + tRect.width > window.innerWidth - 20) left = window.innerWidth - tRect.width - 20;
-    if (top < 20) top = rect.bottom + 15;
-    tooltip.style.left = left + 'px'; tooltip.style.top = top + 'px';
+    tooltip.innerHTML = `<div class="tooltip-header" style="color:${item.rarity.color === 'rainbow' ? '#fff' : item.rarity.color}">${item.name}</div><div style="background:#111; padding:10px; border-radius:5px;">${sHtml}</div>`;
+    const rect = e.target.getBoundingClientRect(); tooltip.style.left = (rect.left + rect.width + 10) + 'px'; tooltip.style.top = rect.top + 'px';
 }
 function hideTooltip() { const t = document.getElementById('tooltip'); if (t) t.style.display = 'none'; }
 function updateInventoryUI() {
