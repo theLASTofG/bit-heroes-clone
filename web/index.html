@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bit Heroes Clone - Ultimate Stats Edition</title>
+    <title>Bit Heroes Clone - Dungeon & Pets</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
 
         <!-- PAINEL ESQUERDO: STATUS TOTAIS -->
         <div id="left-panel">
-            <h3>STATUS TOTAIS</h3>
+            <h3>STATUS DO HERÓI</h3>
             <div id="stats-list">
                 <div class="stat-row"><span>⚔️ ATAQUE:</span> <span id="stat-atk" class="val">0</span></div>
                 <div class="stat-row"><span>❤️ VIDA MÁX:</span> <span id="stat-hp" class="val">0</span></div>
@@ -41,10 +41,8 @@
                 <div class="stat-row"><span>💨 ESQUIVA:</span> <span id="stat-evade" class="val">0%</span></div>
                 <div class="stat-row"><span>🩸 LIFE STEAL:</span> <span id="stat-lifesteal" class="val">0%</span></div>
                 <div class="stat-row"><span>🍀 SORTE:</span> <span id="stat-luck" class="val">1.0x</span></div>
-                <div class="stat-row"><span>✨ ENCANTS:</span> <span id="stat-enchants" class="val">0/10</span></div>
-            </div>
-            <div id="synergy-bonus" style="display:none; margin-top:15px; padding:8px; background:rgba(241,196,15,0.1); border:1px solid #f1c40f; border-radius:5px; font-size:11px; color:#f1c40f; text-align:center;">
-                🌟 SINERGIA ATIVA (+20%)
+                <hr style="border:0; border-top:1px solid #333; margin:10px 0;">
+                <div class="stat-row" style="color:#f1c40f; font-size:16px;"><span>🌟 POWER:</span> <span id="stat-pr" class="val">0</span></div>
             </div>
         </div>
 
@@ -74,11 +72,12 @@
         <!-- PAINEL DIREITO: EQUIPAMENTOS E INVENTÁRIO -->
         <div id="right-panel">
             <div class="panel-section">
-                <h3>EQUIPAMENTOS</h3>
+                <h3>EQUIPAMENTOS & PET</h3>
                 <div class="equip-slots">
-                    <div class="slot" id="slot-weapon">⚔️</div>
-                    <div class="slot" id="slot-armor">🛡️</div>
-                    <div class="slot" id="slot-mount">🐎</div>
+                    <div class="slot" id="slot-weapon" title="Arma">⚔️</div>
+                    <div class="slot" id="slot-armor" title="Armadura">🛡️</div>
+                    <div class="slot" id="slot-mount" title="Montaria">🐎</div>
+                    <div class="slot" id="slot-pet" title="Pet">🐾</div>
                 </div>
             </div>
             <div class="panel-section">
@@ -86,7 +85,7 @@
                 <div id="inventory-grid" class="grid"></div>
             </div>
             <div class="panel-section">
-                <h3>MELHORIAS & ENCANTAMENTOS</h3>
+                <h3>LOJA & MASMORRA</h3>
                 <div id="shop-container"></div>
             </div>
         </div>
