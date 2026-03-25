@@ -80,6 +80,7 @@ const player = {
     hp: 500, maxHp: 500, atk: 50, def: 30,
     crit: 5, evade: 5, lifeSteal: 0, goldBonus: 0, expBonus: 0,
     doubleAtk: 0, tripleAtk: 0, thorns: 0, speed: 100, luck: 2.0, powerRating: 0,
+    finalLuckMult: 1, critDmg: 3.5,
     
     rebirths: 0, rebirthPoints: 0, talentPoints: 0,
     talentsOwned: {}, 
@@ -165,12 +166,13 @@ function calculateStats() {
         }
     });
 
+    let totalLuckMult = 1;
     player.relics.forEach(relic => {
         if (!relic) return;
         const bonus = 1 + (relic.bonusValue / 100);
         if (relic.stat === 'atk') totalAtk *= bonus;
         if (relic.stat === 'hp') totalHp *= bonus;
-        if (relic.stat === 'luck') player.luck *= bonus;
+        if (relic.stat === 'luck') totalLuckMult *= bonus;
         if (relic.stat === 'goldBonus') player.goldBonus += relic.bonusValue;
         if (relic.stat === 'speed') totalSpeed *= bonus;
     });
@@ -192,7 +194,7 @@ function calculateStats() {
 
     if (t.thorns_buff) totalThorns *= (1 + (t.thorns_buff * 0.5));
 
-    let luckMult = player.rebirthUpgrades.luckMult;
+    let luckMult = player.rebirthUpgrades.luckMult * totalLuckMult;
     if (t.luck_buff) luckMult *= (1 + (t.luck_buff * 0.5));
 
     player.atk = totalAtk * player.rebirthUpgrades.atkMult;
@@ -463,7 +465,7 @@ function spawnEnemy() {
     const isBoss = inDungeon ? (dungeonFloor % 5 === 0) : ((defeatedInZone + 1) % 10 === 0);
     const base = monsterBases[Math.min(currentZone - 1, monsterBases.length - 1)];
     let zMult = 1 + (currentZone - 1) * 2;
-    if (inDungeon) zMult *= (dungeonFloor * (currentDungeonType === 'hell' ? 15 : 4));
+    if (inDungeon) zMult *= Math.max(1, dungeonFloor) * (currentDungeonType === 'hell' ? 15 : 4);
     const bMult = isBoss ? (inDungeon ? 20 : 6) : 1;
     
     let modName = ""; let modColor = null; let modScale = 1; let modStatMult = 1; let modLootMult = 1;
@@ -700,4 +702,4 @@ function logMessage(msg) {
     const p = document.createElement('p'); p.innerHTML = msg; log.appendChild(p);
     log.scrollTop = log.scrollHeight; if (log.children.length > 30) log.removeChild(log.firstChild);
 }
-window.onload = () => { calculateStats(); spawnEnemy(); };
+window.onload = () => { calculateStats(); player.hp = player.maxHp; spawnEnemy(); };
