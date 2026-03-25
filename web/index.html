@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bit Heroes Clone - AFK Edition</title>
+    <title>Bit Heroes Clone - God Edition</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container">
-        <!-- Barra Superior: Nível, Ouro, EXP -->
+        <!-- BARRA SUPERIOR -->
         <div id="top-bar">
             <div class="stat-group">
-                <span class="label">NÍVEL:</span>
+                <span class="label">LVL:</span>
                 <span id="player-level">1</span>
             </div>
             <div class="stat-group">
@@ -24,47 +24,64 @@
                     <div id="player-exp-bar" class="exp-bar"></div>
                 </div>
             </div>
+            <div class="stat-group">
+                <span class="label">ZONA:</span>
+                <span id="zone-display">1</span>
+            </div>
         </div>
 
-        <!-- Cena de Batalha (Lado Esquerdo) -->
+        <!-- CENA DE BATALHA -->
         <div id="battle-scene">
             <div id="enemy-area" class="entity-area">
                 <div id="enemy-sprite" class="sprite"></div>
                 <div class="hp-bar-container">
                     <div id="enemy-hp-bar-inner" class="hp-bar"></div>
-                    <span id="enemy-hp-text">150/150</span>
+                    <span id="enemy-hp-text">0/0</span>
                 </div>
-                <span id="enemy-name">Slime</span>
+                <span id="enemy-name">Carregando...</span>
                 <span id="enemy-type" class="badge">ZONA 1</span>
             </div>
 
             <div id="player-area" class="entity-area">
+                <div id="mount-sprite" class="mount-sprite"></div>
                 <div id="player-sprite" class="sprite"></div>
                 <div class="hp-bar-container">
                     <div id="player-hp-bar-inner" class="hp-bar"></div>
-                    <span id="player-hp-text">100/100</span>
+                    <span id="player-hp-text">0/0</span>
                 </div>
-                <span id="player-name">Herói Pixel</span>
+                <span id="player-name">Herói Lendário</span>
             </div>
         </div>
 
-        <!-- Painel de Inventário (Lado Direito) -->
-        <div id="inventory-panel">
-            <h3>EQUIPAMENTOS</h3>
-            <div class="equip-slots">
-                <div class="slot" id="slot-weapon" title="Arma">⚔️</div>
-                <div class="slot" id="slot-armor" title="Armadura">🛡️</div>
+        <!-- PAINEL DIREITO: EQUIPAMENTOS, MONTARIA E INVENTÁRIO -->
+        <div id="right-panel">
+            <div class="panel-section">
+                <h3>EQUIPAMENTOS</h3>
+                <div class="equip-slots">
+                    <div class="slot" id="slot-weapon" data-type="weapon">⚔️</div>
+                    <div class="slot" id="slot-armor" data-type="armor">🛡️</div>
+                    <div class="slot" id="slot-mount" data-type="mount">🐎</div>
+                </div>
             </div>
-            <h3>INVENTÁRIO</h3>
-            <div id="inventory-grid" class="grid">
-                <!-- Itens via JS -->
+            <div class="panel-section">
+                <h3>INVENTÁRIO</h3>
+                <div id="inventory-grid" class="grid"></div>
+            </div>
+            <div class="panel-section">
+                <h3>LOJA DE UPGRADES</h3>
+                <div id="shop-container">
+                    <button class="shop-btn" id="upgrade-atk">Melhorar ATK (💰 100)</button>
+                    <button class="shop-btn" id="upgrade-hp">Melhorar HP (💰 100)</button>
+                    <button class="shop-btn" id="upgrade-luck">Melhorar SORTE (💰 500)</button>
+                </div>
             </div>
         </div>
 
-        <!-- Log de Batalha (Rodapé Esquerdo) -->
-        <div id="battle-log">
-            <p>⚔️ A aventura ociosa começou!</p>
-        </div>
+        <!-- LOG DE BATALHA -->
+        <div id="battle-log"></div>
+
+        <!-- TOOLTIP DINÂMICO -->
+        <div id="tooltip" class="tooltip" style="display: none;"></div>
     </div>
     <script src="game.js"></script>
 </body>
