@@ -1,4 +1,4 @@
-// --- SISTEMA DE RARIDADES (10 Tiers) ---
+// --- SISTEMA DE RARIDADES (10 Tiers Base) ---
 const rarities = [
     { name: "Common", color: "#7f8c8d", weight: 60, bonusMult: 1.0 },
     { name: "Uncommon", color: "#2ecc71", weight: 25, bonusMult: 1.5 },
@@ -12,47 +12,51 @@ const rarities = [
     { name: "Godly", color: "#ffffff", weight: 0.0004, bonusMult: 100.0 }
 ];
 
+// --- SISTEMA DE ENCANTAMENTOS (50 Tiers) ---
+const enchantTiers = Array.from({length: 50}, (_, i) => ({
+    tier: i + 1,
+    name: `T${i+1}`,
+    color: `hsl(${(i * 7.2) % 360}, 70%, 60%)`,
+    power: 1 + (i * 0.5) // Escala de poder
+}));
+
+const enchantStats = [
+    { id: 'atk', name: 'Ataque', icon: '⚔️' },
+    { id: 'hp', name: 'Vida', icon: '❤️' },
+    { id: 'crit', name: 'Crítico', icon: '💥' },
+    { id: 'evade', name: 'Esquiva', icon: '💨' },
+    { id: 'lifeSteal', name: 'Roubo de Vida', icon: '🩸' }
+];
+
 // --- JOGADOR ---
 const player = {
-    level: 1, exp: 0, nextLevelExp: 100, gold: 0,
-    baseHp: 120, baseAtk: 15, baseDef: 5,
-    hp: 120, maxHp: 120, atk: 15, def: 5,
+    level: 1, exp: 0, nextLevelExp: 100, gold: 1000,
+    baseHp: 150, baseAtk: 20, baseDef: 10,
+    hp: 150, maxHp: 150, atk: 20, def: 10,
     crit: 5, evade: 5, lifeSteal: 0,
-    luck: 1.0, // Multiplicador de drop
+    luck: 1.0,
     
     equipment: { weapon: null, armor: null, mount: null },
     inventory: [],
     
+    // Encantamentos do Jogador (desbloqueia 1 slot a cada 5 níveis)
+    enchants: [null, null, null, null, null, null, null, null, null, null], // Max 10 slots
     upgrades: { atk: 0, hp: 0, luck: 0 }
 };
 
 // --- BANCO DE DADOS DE ITENS ---
 const itemTemplates = {
-    weapon: [
-        { name: "Sword", icon: "⚔️", stat: "atk" },
-        { name: "Axe", icon: "🪓", stat: "atk" },
-        { name: "Bow", icon: "🏹", stat: "atk" },
-        { name: "Staff", icon: "🪄", stat: "atk" }
-    ],
-    armor: [
-        { name: "Chestplate", icon: "🛡️", stat: "def" },
-        { name: "Robe", icon: "🥋", stat: "def" },
-        { name: "Leather", icon: "🧥", stat: "def" }
-    ],
-    mount: [
-        { name: "Horse", icon: "🐎", stat: "hp" },
-        { name: "Wolf", icon: "🐺", stat: "atk" },
-        { name: "Dragon", icon: "🐲", stat: "all" }
-    ]
+    weapon: [{ name: "Sword", icon: "⚔️" }, { name: "Axe", icon: "🪓" }, { name: "Bow", icon: "🏹" }],
+    armor: [{ name: "Chestplate", icon: "🛡️" }, { name: "Robe", icon: "🥋" }, { name: "Leather", icon: "🧥" }],
+    mount: [{ name: "Horse", icon: "🐎" }, { name: "Wolf", icon: "🐺" }, { name: "Dragon", icon: "🐲" }]
 };
 
-// --- MONSTROS ---
 const monsterBases = [
-    { name: "Slime", icon: "🟢", color: "#27ae60", hp: 60, atk: 12 },
-    { name: "Bat", icon: "🦇", color: "#34495e", hp: 80, atk: 16 },
-    { name: "Spider", icon: "🕷️", color: "#8e44ad", hp: 120, atk: 22 },
-    { name: "Skeleton", icon: "💀", color: "#ecf0f1", hp: 180, atk: 30 },
-    { name: "Demon", icon: "👿", color: "#c0392b", hp: 350, atk: 55 }
+    { name: "Slime", color: "#27ae60", hp: 80, atk: 15 },
+    { name: "Bat", color: "#34495e", hp: 120, atk: 20 },
+    { name: "Spider", color: "#8e44ad", hp: 200, atk: 35 },
+    { name: "Skeleton", color: "#ecf0f1", hp: 350, atk: 50 },
+    { name: "Demon", color: "#c0392b", hp: 800, atk: 100 }
 ];
 
 let currentEnemy = null;
@@ -64,11 +68,12 @@ let currentTurn = 'player';
 // --- CORE FUNCTIONS ---
 
 function calculateStats() {
-    player.maxHp = (player.baseHp + (player.level * 25) + (player.upgrades.hp * 50));
-    player.atk = (player.baseAtk + (player.level * 5) + (player.upgrades.atk * 10));
-    player.def = (player.baseDef + (player.level * 2));
+    player.maxHp = (player.baseHp + (player.level * 30) + (player.upgrades.hp * 60));
+    player.atk = (player.baseAtk + (player.level * 6) + (player.upgrades.atk * 12));
+    player.def = (player.baseDef + (player.level * 3));
     player.crit = 5; player.evade = 5; player.lifeSteal = 0;
 
+    // Equipamentos
     Object.values(player.equipment).forEach(item => {
         if (!item) return;
         if (item.stats.atk) player.atk += item.stats.atk;
@@ -79,50 +84,45 @@ function calculateStats() {
         if (item.stats.lifeSteal) player.lifeSteal += item.stats.lifeSteal;
     });
 
-    // Sinergia: Se Arma e Armadura forem da mesma raridade, bônus de 15% em tudo
+    // Encantamentos
+    player.enchants.forEach(enchant => {
+        if (!enchant) return;
+        const val = enchant.value;
+        if (enchant.stat === 'atk') player.atk += val;
+        if (enchant.stat === 'hp') player.maxHp += val;
+        if (enchant.stat === 'crit') player.crit += val;
+        if (enchant.stat === 'evade') player.evade += val;
+        if (enchant.stat === 'lifeSteal') player.lifeSteal += val;
+    });
+
+    // Sinergia
     if (player.equipment.weapon && player.equipment.armor && 
         player.equipment.weapon.rarity.name === player.equipment.armor.rarity.name) {
-        player.atk *= 1.15;
-        player.maxHp *= 1.15;
+        player.atk *= 1.2;
+        player.maxHp *= 1.2;
     }
 }
 
-function generateItem(type = null, forcedRarity = null) {
+function generateItem(type = null) {
     if (!type) {
         const types = ['weapon', 'armor', 'mount'];
         type = types[Math.floor(Math.random() * types.length)];
     }
-    
     const template = itemTemplates[type][Math.floor(Math.random() * itemTemplates[type].length)];
     
-    let rarity;
-    if (forcedRarity) {
-        rarity = forcedRarity;
-    } else {
-        const roll = Math.random() * 100 / player.luck;
-        let cumulative = 0;
-        rarity = rarities[0];
-        for (const r of rarities) {
-            cumulative += r.weight;
-            if (roll <= cumulative) {
-                rarity = r;
-                break;
-            }
-        }
+    const roll = Math.random() * 100 / player.luck;
+    let cumulative = 0;
+    let rarity = rarities[0];
+    for (const r of rarities) {
+        cumulative += r.weight;
+        if (roll <= cumulative) { rarity = r; break; }
     }
 
     const m = rarity.bonusMult;
     const stats = {};
-    if (type === 'weapon') {
-        stats.atk = Math.floor(10 * m);
-        stats.crit = Math.floor(2 * m);
-    } else if (type === 'armor') {
-        stats.def = Math.floor(5 * m);
-        stats.evade = Math.floor(1 * m);
-    } else {
-        stats.hp = Math.floor(50 * m);
-        stats.lifeSteal = Math.floor(1 * m);
-    }
+    if (type === 'weapon') { stats.atk = Math.floor(15 * m); stats.crit = Math.floor(3 * m); }
+    else if (type === 'armor') { stats.def = Math.floor(8 * m); stats.evade = Math.floor(2 * m); }
+    else { stats.hp = Math.floor(80 * m); stats.lifeSteal = Math.floor(2 * m); }
 
     return {
         id: Math.random().toString(36).substr(2, 9),
@@ -137,119 +137,83 @@ function generateItem(type = null, forcedRarity = null) {
 function spawnEnemy() {
     const isBoss = (defeatedInZone + 1) % 10 === 0;
     const base = monsterBases[Math.min(currentZone - 1, monsterBases.length - 1)];
-    const zMult = 1 + (currentZone - 1) * 0.8;
-    const bMult = isBoss ? 4 : 1;
+    const zMult = 1 + (currentZone - 1) * 1.0;
+    const bMult = isBoss ? 5 : 1;
 
     currentEnemy = {
-        name: isBoss ? `BOSS ${base.name.toUpperCase()}` : base.name,
+        name: isBoss ? `GOD BOSS ${base.name.toUpperCase()}` : base.name,
         hp: Math.floor(base.hp * zMult * bMult),
         maxHp: Math.floor(base.hp * zMult * bMult),
         atk: Math.floor(base.atk * zMult * bMult),
-        def: Math.floor(10 * zMult),
-        gold: Math.floor(20 * zMult * bMult),
-        exp: Math.floor(50 * zMult * bMult),
+        def: Math.floor(15 * zMult),
+        gold: Math.floor(50 * zMult * bMult),
+        exp: Math.floor(100 * zMult * bMult),
         isBoss: isBoss,
         color: base.color,
-        scale: isBoss ? 1.5 : 1
+        scale: isBoss ? 1.6 : 1
     };
 
     const sprite = document.getElementById('enemy-sprite');
     sprite.style.backgroundColor = currentEnemy.color;
     sprite.style.transform = `scale(${currentEnemy.scale})`;
     
-    document.getElementById('enemy-type').textContent = isBoss ? "BOSS" : "ZONA " + currentZone;
+    document.getElementById('enemy-type').textContent = isBoss ? "ULTRA BOSS" : "ZONA " + currentZone;
     document.getElementById('enemy-type').className = `badge ${isBoss ? 'boss' : ''}`;
     
     isBattleActive = true;
     currentTurn = 'player';
     updateUI();
-    logMessage(`--- ${currentEnemy.name} apareceu! ---`);
+    logMessage(`⚔️ Inimigo: ${currentEnemy.name} Nível ${currentZone}`);
     setTimeout(battleLoop, 1000);
 }
 
 function battleLoop() {
     if (!isBattleActive) return;
-
-    if (currentTurn === 'player') {
-        performAttack(player, currentEnemy);
-        currentTurn = 'enemy';
-    } else {
-        performAttack(currentEnemy, player);
-        currentTurn = 'player';
-    }
-
+    if (currentTurn === 'player') { performAttack(player, currentEnemy); currentTurn = 'enemy'; }
+    else { performAttack(currentEnemy, player); currentTurn = 'player'; }
     if (isBattleActive) setTimeout(battleLoop, 1200);
 }
 
 function performAttack(att, def) {
     const isPlayer = att === player;
-    
-    // Evade
-    if (!isPlayer && Math.random() * 100 < player.evade) {
-        logMessage(`💨 ESQUIVA!`);
-        return;
-    }
+    if (!isPlayer && Math.random() * 100 < player.evade) { logMessage(`💨 ESQUIVA!`); return; }
 
-    // Crit
     let mult = 1;
     let crit = false;
-    if (isPlayer && Math.random() * 100 < player.crit) {
-        mult = 2.5;
-        crit = true;
-    }
+    if (isPlayer && Math.random() * 100 < player.crit) { mult = 3.0; crit = true; }
 
-    let dmg = Math.floor((att.atk - (def.def * 0.4)) * (Math.random() * 0.3 + 0.85) * mult);
-    dmg = Math.max(Math.floor(att.atk * 0.2), dmg);
+    let dmg = Math.floor((att.atk - (def.def * 0.4)) * (Math.random() * 0.2 + 0.9) * mult);
+    dmg = Math.max(Math.floor(att.atk * 0.3), dmg);
 
     def.hp -= dmg;
-    
-    // Life Steal
-    if (isPlayer && player.lifeSteal > 0) {
-        const heal = Math.floor(dmg * (player.lifeSteal / 100));
-        player.hp = Math.min(player.maxHp, player.hp + heal);
-    }
+    if (isPlayer && player.lifeSteal > 0) player.hp = Math.min(player.maxHp, player.hp + Math.floor(dmg * (player.lifeSteal / 100)));
 
-    // Animation
     const s = isPlayer ? document.getElementById('player-sprite') : document.getElementById('enemy-sprite');
     const d = isPlayer ? document.getElementById('enemy-sprite') : document.getElementById('player-sprite');
     s.classList.add(isPlayer ? 'attack-player' : 'attack-enemy');
     setTimeout(() => {
         s.classList.remove(isPlayer ? 'attack-player' : 'attack-enemy');
         d.classList.add('damage-flash');
-        setTimeout(() => d.classList.remove('damage-flash'), 200);
+        setTimeout(() => d.classList.remove('damage-flash'), 150);
     }, 150);
 
-    logMessage(`${crit ? '💥 CRIT! ' : ''}${att === player ? 'Você' : att.name} causou ${dmg} de dano.`);
+    logMessage(`${crit ? '💥 CRIT! ' : ''}${isPlayer ? 'Você' : att.name} causou ${dmg} dano.`);
     updateUI();
 
-    if (def.hp <= 0) {
-        isBattleActive = false;
-        handleVictory(isPlayer);
-    }
+    if (def.hp <= 0) { isBattleActive = false; handleVictory(isPlayer); }
 }
 
 function handleVictory(isPlayer) {
     if (isPlayer) {
-        logMessage(`✨ Vitória! +${currentEnemy.gold} Ouro.`);
         player.gold += currentEnemy.gold;
         player.exp += currentEnemy.exp;
         defeatedInZone++;
-        
-        if (currentEnemy.isBoss) {
-            currentZone++;
-            defeatedInZone = 0;
-            logMessage(`🚀 AVANÇOU PARA ZONA ${currentZone}!`);
-        }
-
+        if (currentEnemy.isBoss) { currentZone++; defeatedInZone = 0; logMessage(`🚀 ZONA ${currentZone} DESBLOQUEADA!`); }
         checkLevelUp();
         rollLoot();
-        
-        setTimeout(() => {
-            player.hp = Math.min(player.maxHp, player.hp + (player.maxHp * 0.4));
-            spawnEnemy();
-        }, 2000);
+        setTimeout(() => { player.hp = Math.min(player.maxHp, player.hp + (player.maxHp * 0.5)); spawnEnemy(); }, 1500);
     } else {
-        logMessage(`💀 Derrotado! Reiniciando zona...`);
+        logMessage(`💀 Derrotado!`);
         defeatedInZone = 0;
         player.hp = player.maxHp;
         setTimeout(spawnEnemy, 3000);
@@ -257,8 +221,7 @@ function handleVictory(isPlayer) {
 }
 
 function rollLoot() {
-    let chance = currentEnemy.isBoss ? 0.95 : 0.25;
-    if (Math.random() < chance) {
+    if (Math.random() < (currentEnemy.isBoss ? 1.0 : 0.3)) {
         const item = generateItem();
         player.inventory.push(item);
         logMessage(`🎁 DROP: <span style="color:${item.rarity.color}">[${item.rarity.name}] ${item.name}</span>`);
@@ -270,11 +233,48 @@ function checkLevelUp() {
     if (player.exp >= player.nextLevelExp) {
         player.level++;
         player.exp -= player.nextLevelExp;
-        player.nextLevelExp = Math.floor(player.nextLevelExp * 1.8);
+        player.nextLevelExp = Math.floor(player.nextLevelExp * 1.9);
         calculateStats();
         player.hp = player.maxHp;
-        logMessage(`🎊 LEVEL UP: ${player.level}! 🎊`);
+        logMessage(`🎊 NÍVEL ${player.level}! 🎊`);
+        if (player.level % 5 === 0) logMessage(`✨ NOVO SLOT DE ENCANTAMENTO! ✨`);
     }
+}
+
+// --- ENCANTAMENTOS ---
+
+function rollEnchant(slotIndex) {
+    const cost = 200 + (player.level * 50);
+    if (player.gold < cost) { logMessage(`❌ Ouro insuficiente (${cost})`); return; }
+    if (slotIndex >= Math.floor(player.level / 5) + 1) { logMessage(`❌ Slot bloqueado (Desbloqueia a cada 5 níveis)`); return; }
+
+    player.gold -= cost;
+    
+    // Chance de Tier maior baseada em sorte
+    const tierRoll = Math.random() * 100 / (1 + (player.upgrades.luck * 0.1));
+    let tierIndex = 0;
+    if (tierRoll < 0.5) tierIndex = Math.min(49, Math.floor(Math.random() * 10) + 40);
+    else if (tierRoll < 5) tierIndex = Math.min(49, Math.floor(Math.random() * 15) + 25);
+    else tierIndex = Math.floor(Math.random() * 25);
+
+    const tier = enchantTiers[tierIndex];
+    const stat = enchantStats[Math.floor(Math.random() * enchantStats.length)];
+    
+    let value = Math.floor(tier.power * 5);
+    if (stat.id === 'hp') value *= 10;
+    if (stat.id === 'crit' || stat.id === 'evade' || stat.id === 'lifeSteal') value = Math.floor(tier.power * 1.5);
+
+    player.enchants[slotIndex] = {
+        tier: tier,
+        stat: stat.id,
+        statName: stat.name,
+        value: value,
+        icon: stat.icon
+    };
+
+    calculateStats();
+    updateUI();
+    logMessage(`✨ Encantamento ${tier.name} [${stat.name} +${value}] aplicado!`);
 }
 
 // --- UI & TOOLTIPS ---
@@ -283,23 +283,29 @@ const tooltip = document.getElementById('tooltip');
 
 function showTooltip(e, item) {
     tooltip.style.display = 'block';
-    tooltip.style.left = (e.pageX + 15) + 'px';
-    tooltip.style.top = (e.pageY + 15) + 'px';
+    tooltip.style.left = (e.pageX + 20) + 'px';
+    tooltip.style.top = (e.pageY + 20) + 'px';
     tooltip.style.borderColor = item.rarity.color;
 
     let statsHtml = '';
-    for (const [s, v] of Object.entries(item.stats)) {
-        const current = player.equipment[item.type];
-        const diff = current ? v - (current.stats[s] || 0) : v;
-        const diffClass = diff >= 0 ? 'stat-up' : 'stat-down';
-        statsHtml += `<div class="tooltip-stat"><span>${s.toUpperCase()}:</span> <span class="${diffClass}">${v} (${diff >= 0 ? '+' : ''}${diff})</span></div>`;
-    }
+    const current = player.equipment[item.type];
+    
+    const allPossibleStats = ['atk', 'def', 'hp', 'crit', 'evade', 'lifeSteal'];
+    allPossibleStats.forEach(s => {
+        const val = item.stats[s] || 0;
+        const currVal = current ? (current.stats[s] || 0) : 0;
+        if (val === 0 && currVal === 0) return;
+        
+        const diff = val - currVal;
+        const diffText = diff > 0 ? `<span class="stat-up">+${diff}</span>` : (diff < 0 ? `<span class="stat-down">${diff}</span>` : `<span style="color:#888">0</span>`);
+        statsHtml += `<div class="tooltip-stat"><span>${s.toUpperCase()}:</span> <span>${val} (${diffText})</span></div>`;
+    });
 
     tooltip.innerHTML = `
         <div class="tooltip-header" style="color:${item.rarity.color}">${item.name}</div>
-        <div style="font-size:11px; color:#888; margin-bottom:10px;">Tipo: ${item.type.toUpperCase()}</div>
-        ${statsHtml}
-        <div style="font-size:10px; color:#aaa; margin-top:10px; font-style:italic;">Clique para equipar</div>
+        <div style="font-size:11px; color:#888; margin-bottom:10px;">Raridade: ${item.rarity.name}</div>
+        <div style="background:#111; padding:10px; border-radius:5px;">${statsHtml}</div>
+        <div style="font-size:10px; color:#f1c40f; margin-top:10px; text-align:center;">CLIQUE PARA EQUIPAR</div>
     `;
 }
 
@@ -308,13 +314,13 @@ function hideTooltip() { tooltip.style.display = 'none'; }
 function updateInventoryUI() {
     const grid = document.getElementById('inventory-grid');
     grid.innerHTML = '';
-    player.inventory.forEach((item, i) => {
+    player.inventory.slice(-20).forEach((item, i) => { // Mostra apenas os últimos 20
         const div = document.createElement('div');
         div.className = `item-slot ${item.rarity.name.toLowerCase()}`;
         div.textContent = item.icon;
         div.onmouseover = (e) => showTooltip(e, item);
         div.onmouseout = hideTooltip;
-        div.onclick = () => { equipItem(i); hideTooltip(); };
+        div.onclick = () => { equipItem(player.inventory.indexOf(item)); hideTooltip(); };
         grid.appendChild(div);
     });
 }
@@ -330,7 +336,7 @@ function equipItem(i) {
 
 function updateUI() {
     document.getElementById('player-level').textContent = player.level;
-    document.getElementById('player-gold').textContent = player.gold;
+    document.getElementById('player-gold').textContent = Math.floor(player.gold);
     document.getElementById('player-hp-text').textContent = `${Math.max(0, Math.ceil(player.hp))}/${Math.ceil(player.maxHp)}`;
     document.getElementById('player-hp-bar-inner').style.width = `${(player.hp / player.maxHp) * 100}%`;
     document.getElementById('player-exp-bar').style.width = `${(player.exp / player.nextLevelExp) * 100}%`;
@@ -347,18 +353,50 @@ function updateUI() {
         const item = player.equipment[type];
         slot.textContent = item ? item.icon : (type === 'weapon' ? '⚔️' : type === 'armor' ? '🛡️' : '🐎');
         slot.className = `slot ${item ? item.rarity.name.toLowerCase() : ''}`;
-        if (item) {
-            slot.onmouseover = (e) => showTooltip(e, item);
-            slot.onmouseout = hideTooltip;
-        }
+        if (item) { slot.onmouseover = (e) => showTooltip(e, item); slot.onmouseout = hideTooltip; }
     });
 
-    // Atualizar Loja
-    document.getElementById('upgrade-atk').textContent = `Melhorar ATK (💰 ${100 + player.upgrades.atk * 150})`;
-    document.getElementById('upgrade-hp').textContent = `Melhorar HP (💰 ${100 + player.upgrades.hp * 150})`;
-    document.getElementById('upgrade-luck').textContent = `Melhorar SORTE (💰 ${500 + player.upgrades.luck * 1000})`;
+    // Atualizar Encantamentos na Loja
+    const shop = document.getElementById('shop-container');
+    shop.innerHTML = `
+        <button class="shop-btn" id="upgrade-atk">Melhorar ATK (💰 ${100 + player.upgrades.atk * 150})</button>
+        <button class="shop-btn" id="upgrade-hp">Melhorar HP (💰 ${100 + player.upgrades.hp * 150})</button>
+        <button class="shop-btn" id="upgrade-luck">Melhorar SORTE (💰 ${500 + player.upgrades.luck * 1000})</button>
+        <h3 style="font-size:12px; margin-top:15px; color:#f1c40f">GIRAR ENCANTAMENTOS</h3>
+        <div class="enchant-grid" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:5px;">
+            ${player.enchants.map((en, i) => {
+                const locked = i >= Math.floor(player.level / 5) + 1;
+                return `<div class="enchant-slot ${locked ? 'locked' : ''}" 
+                             style="border:1px solid ${en ? en.tier.color : '#444'}; 
+                                    background:${locked ? '#000' : '#111'}; 
+                                    aspect-ratio:1; display:flex; align-items:center; justify-content:center; 
+                                    font-size:14px; cursor:${locked ? 'not-allowed' : 'pointer'}"
+                             onclick="${locked ? '' : `rollEnchant(${i})`}"
+                             title="${en ? `${en.tier.name}: ${en.statName} +${en.value}` : (locked ? 'Desbloqueia a cada 5 níveis' : 'Clique para Girar (💰)')}">
+                             ${en ? en.icon : (locked ? '🔒' : '✨')}
+                        </div>`;
+            }).join('')}
+        </div>
+    `;
+
+    // Re-bind buttons
+    document.getElementById('upgrade-atk').onclick = () => buyUpgrade('atk', 100, 150);
+    document.getElementById('upgrade-hp').onclick = () => buyUpgrade('hp', 100, 150);
+    document.getElementById('upgrade-luck').onclick = () => buyUpgrade('luck', 500, 1000);
 
     updateInventoryUI();
+}
+
+function buyUpgrade(stat, base, scale) {
+    const cost = base + player.upgrades[stat] * scale;
+    if (player.gold >= cost) {
+        player.gold -= cost;
+        player.upgrades[stat]++;
+        if (stat === 'luck') player.luck += 0.2;
+        calculateStats();
+        updateUI();
+        logMessage(`🔥 Upgrade ${stat.toUpperCase()} comprado!`);
+    }
 }
 
 function logMessage(msg) {
@@ -367,45 +405,7 @@ function logMessage(msg) {
     p.innerHTML = msg;
     log.appendChild(p);
     log.scrollTop = log.scrollHeight;
-    if (log.children.length > 30) log.removeChild(log.firstChild);
+    if (log.children.length > 25) log.removeChild(log.firstChild);
 }
 
-// --- LOJA ---
-document.getElementById('upgrade-atk').onclick = () => {
-    const cost = 100 + player.upgrades.atk * 150;
-    if (player.gold >= cost) {
-        player.gold -= cost;
-        player.upgrades.atk++;
-        calculateStats();
-        updateUI();
-        logMessage(`🔥 Upgrade: ATK aumentado!`);
-    }
-};
-
-document.getElementById('upgrade-hp').onclick = () => {
-    const cost = 100 + player.upgrades.hp * 150;
-    if (player.gold >= cost) {
-        player.gold -= cost;
-        player.upgrades.hp++;
-        calculateStats();
-        player.hp = player.maxHp;
-        updateUI();
-        logMessage(`💚 Upgrade: HP aumentado!`);
-    }
-};
-
-document.getElementById('upgrade-luck').onclick = () => {
-    const cost = 500 + player.upgrades.luck * 1000;
-    if (player.gold >= cost) {
-        player.gold -= cost;
-        player.upgrades.luck++;
-        player.luck += 0.2;
-        updateUI();
-        logMessage(`🍀 Upgrade: Sorte aumentada!`);
-    }
-};
-
-window.onload = () => {
-    calculateStats();
-    spawnEnemy();
-};
+window.onload = () => { calculateStats(); spawnEnemy(); };

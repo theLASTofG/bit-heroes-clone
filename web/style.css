@@ -224,6 +224,23 @@ body {
 }
 .shop-btn:hover { background-color: #34495e; }
 
+.enchant-slot {
+    border-radius: 4px;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.enchant-slot:hover:not(.locked) {
+    transform: scale(1.1);
+    box-shadow: 0 0 10px #f1c40f;
+    z-index: 5;
+}
+
+.enchant-slot.locked {
+    opacity: 0.5;
+    border-style: dashed !important;
+}
+
 /* LOG DE BATALHA */
 #battle-log {
     grid-column: 1;
