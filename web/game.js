@@ -64,6 +64,7 @@ let currentZone = 1;
 let defeatedInZone = 0;
 let isBattleActive = false;
 let currentTurn = 'player';
+let battleTimer = null;
 
 // --- CORE FUNCTIONS ---
 
@@ -74,7 +75,6 @@ function calculateStats() {
     player.crit = 5; player.evade = 5; player.lifeSteal = 0;
     player.goldBonus = 0; player.expBonus = 0;
 
-    // Equipamentos & Pets
     Object.values(player.equipment).forEach(item => {
         if (!item) return;
         if (item.stats) {
@@ -84,7 +84,7 @@ function calculateStats() {
             if (item.stats.crit) player.crit += item.stats.crit;
             if (item.stats.evade) player.evade += item.stats.evade;
             if (item.stats.lifeSteal) player.lifeSteal += item.stats.lifeSteal;
-        } else if (item.stat) { // Pet
+        } else if (item.stat) {
             const val = item.val * (1 + player.level * 0.1);
             if (item.stat === 'atk') player.atk += val;
             if (item.stat === 'hp') player.maxHp += val;
@@ -94,7 +94,6 @@ function calculateStats() {
         }
     });
 
-    // Encantamentos
     player.enchants.forEach(en => {
         if (!en) return;
         if (en.stat === 'atk') player.atk += en.value;
@@ -106,14 +105,12 @@ function calculateStats() {
         if (en.stat === 'expBonus') player.expBonus += en.value;
     });
 
-    // Sinergia
     if (player.equipment.weapon && player.equipment.armor && 
         player.equipment.weapon.rarity.name === player.equipment.armor.rarity.name) {
         player.atk *= 1.25;
         player.maxHp *= 1.25;
     }
 
-    // Power Rating (PR)
     player.powerRating = Math.floor((player.atk * 2) + (player.maxHp / 5) + (player.def * 3) + (player.crit * 10) + (player.evade * 10) + (player.lifeSteal * 20));
 }
 
@@ -125,7 +122,6 @@ function updateUI() {
     document.getElementById('player-exp-bar').style.width = `${(player.exp / player.nextLevelExp) * 100}%`;
     document.getElementById('zone-display').textContent = inDungeon ? `DUNGEON F${dungeonFloor}` : currentZone;
 
-    // Status Panel
     document.getElementById('stat-atk').textContent = Math.floor(player.atk);
     document.getElementById('stat-hp').textContent = Math.floor(player.maxHp);
     document.getElementById('stat-def').textContent = Math.floor(player.def);
@@ -147,6 +143,7 @@ function updateUI() {
         slot.textContent = item ? item.icon : (type === 'weapon' ? '⚔️' : type === 'armor' ? '🛡️' : type === 'mount' ? '🐎' : '🐾');
         slot.className = `slot ${item?.rarity?.name?.toLowerCase() || item?.rarity?.toLowerCase() || ''}`;
         if (item) { slot.onmouseover = (e) => showTooltip(e, item); slot.onmouseout = hideTooltip; }
+        else { slot.onmouseover = null; }
     });
 
     updateShopUI();
@@ -180,6 +177,8 @@ function updateShopUI() {
 }
 
 function toggleDungeon() {
+    isBattleActive = false;
+    clearTimeout(battleTimer);
     if (inDungeon) {
         inDungeon = false;
         dungeonFloor = 0;
@@ -189,11 +188,13 @@ function toggleDungeon() {
         dungeonFloor = 1;
         logMessage(`🏰 Você entrou na Masmorra Ancestral!`);
     }
-    isBattleActive = false;
     spawnEnemy();
 }
 
 function spawnEnemy() {
+    isBattleActive = false;
+    clearTimeout(battleTimer);
+    
     const isBoss = inDungeon ? (dungeonFloor === MAX_DUNGEON_FLOORS) : ((defeatedInZone + 1) % 10 === 0);
     const base = monsterBases[Math.min(currentZone - 1, monsterBases.length - 1)];
     const zMult = 1 + (currentZone - 1) * 1.2 + (inDungeon ? dungeonFloor * 0.5 : 0);
@@ -211,34 +212,61 @@ function spawnEnemy() {
     sprite.style.transform = `scale(${currentEnemy.scale})`;
     document.getElementById('enemy-type').textContent = isBoss ? "BOSS" : (inDungeon ? `F${dungeonFloor}` : "ZONA " + currentZone);
     document.getElementById('enemy-type').className = `badge ${isBoss ? 'boss' : ''}`;
-    isBattleActive = true; currentTurn = 'player';
+    
+    isBattleActive = true; 
+    currentTurn = 'player';
     updateUI();
-    setTimeout(battleLoop, 1000);
+    battleTimer = setTimeout(battleLoop, 1000);
 }
 
 function battleLoop() {
-    if (!isBattleActive) return;
-    if (currentTurn === 'player') { performAttack(player, currentEnemy); currentTurn = 'enemy'; }
-    else { performAttack(currentEnemy, player); currentTurn = 'player'; }
-    if (isBattleActive) setTimeout(battleLoop, 1200);
+    if (!isBattleActive || !currentEnemy) return;
+    
+    if (currentTurn === 'player') { 
+        performAttack(player, currentEnemy); 
+        currentTurn = 'enemy'; 
+    } else { 
+        performAttack(currentEnemy, player); 
+        currentTurn = 'player'; 
+    }
+    
+    if (isBattleActive) {
+        battleTimer = setTimeout(battleLoop, 1200);
+    }
 }
 
 function performAttack(att, def) {
+    if (!isBattleActive || !currentEnemy) return;
+    
     const isPlayer = att === player;
     if (!isPlayer && Math.random() * 100 < player.evade) { logMessage(`💨 ESQUIVA!`); return; }
+    
     let mult = 1; let crit = false;
     if (isPlayer && Math.random() * 100 < player.crit) { mult = 3.5; crit = true; }
+    
     let dmg = Math.floor((att.atk - (def.def * 0.4)) * (Math.random() * 0.2 + 0.9) * mult);
     dmg = Math.max(Math.floor(att.atk * 0.3), dmg);
+    
     def.hp -= dmg;
     if (isPlayer && player.lifeSteal > 0) player.hp = Math.min(player.maxHp, player.hp + Math.floor(dmg * (player.lifeSteal / 100)));
+    
     const s = isPlayer ? document.getElementById('player-sprite') : document.getElementById('enemy-sprite');
     const d = isPlayer ? document.getElementById('enemy-sprite') : document.getElementById('player-sprite');
     s.classList.add(isPlayer ? 'attack-player' : 'attack-enemy');
-    setTimeout(() => { s.classList.remove(isPlayer ? 'attack-player' : 'attack-enemy'); d.classList.add('damage-flash'); setTimeout(() => d.classList.remove('damage-flash'), 150); }, 150);
+    setTimeout(() => { 
+        s.classList.remove(isPlayer ? 'attack-player' : 'attack-enemy'); 
+        d.classList.add('damage-flash'); 
+        setTimeout(() => d.classList.remove('damage-flash'), 150); 
+    }, 150);
+    
     logMessage(`${crit ? '💥 CRIT! ' : ''}${isPlayer ? 'Você' : att.name} causou ${dmg} dano.`);
     updateUI();
-    if (def.hp <= 0) { isBattleActive = false; handleVictory(isPlayer); }
+    
+    if (def.hp <= 0) { 
+        isBattleActive = false; 
+        clearTimeout(battleTimer);
+        handleVictory(isPlayer); 
+    }
 }
 
 function handleVictory(isPlayer) {
@@ -249,14 +277,28 @@ function handleVictory(isPlayer) {
         logMessage(`✨ Vitória! +${goldGain} Ouro, +${expGain} EXP.`);
         
         if (inDungeon) {
-            if (dungeonFloor < MAX_DUNGEON_FLOORS) { dungeonFloor++; logMessage(`🔼 Avançando para o andar ${dungeonFloor}...`); }
-            else { inDungeon = false; dungeonFloor = 0; logMessage(`🏆 DUNGEON CONCLUÍDA!`); rollLoot(true); }
+            if (dungeonFloor < MAX_DUNGEON_FLOORS) { 
+                dungeonFloor++; 
+                logMessage(`🔼 Avançando para o andar ${dungeonFloor}...`); 
+            } else { 
+                inDungeon = false; 
+                dungeonFloor = 0; 
+                logMessage(`🏆 DUNGEON CONCLUÍDA!`); 
+                rollLoot(true); 
+            }
         } else {
             defeatedInZone++;
-            if (currentEnemy.isBoss) { currentZone++; defeatedInZone = 0; logMessage(`🚀 ZONA ${currentZone}!`); }
+            if (currentEnemy.isBoss) { 
+                currentZone++; 
+                defeatedInZone = 0; 
+                logMessage(`🚀 ZONA ${currentZone}!`); 
+            }
         }
         checkLevelUp(); rollLoot();
-        setTimeout(() => { player.hp = Math.min(player.maxHp, player.hp + (player.maxHp * 0.5)); spawnEnemy(); }, 1500);
+        setTimeout(() => { 
+            player.hp = Math.min(player.maxHp, player.hp + (player.maxHp * 0.5)); 
+            spawnEnemy(); 
+        }, 1500);
     } else {
         logMessage(`💀 Derrotado!`);
         if (inDungeon) { inDungeon = false; dungeonFloor = 0; }
@@ -266,6 +308,7 @@ function handleVictory(isPlayer) {
 }
 
 function rollLoot(guaranteedLegendary = false) {
+    if (!currentEnemy) return;
     let chance = currentEnemy.isBoss ? 1.0 : 0.3;
     if (Math.random() < chance) {
         const item = guaranteedLegendary ? generateItem(null, rarities[4]) : generateItem();
@@ -273,7 +316,6 @@ function rollLoot(guaranteedLegendary = false) {
         logMessage(`🎁 DROP: <span style="color:${item.rarity.color || '#fff'}">[${item.rarity.name || item.rarity}] ${item.name}</span>`);
         updateInventoryUI();
     }
-    // Chance de Pet
     if (Math.random() < 0.05) {
         const pet = petBases[Math.floor(Math.random() * petBases.length)];
         player.inventory.push({...pet, type: 'pet'});
@@ -332,7 +374,7 @@ function showTooltip(e, item) {
             const dText = diff > 0 ? `<span class="stat-up">+${diff}</span>` : (diff < 0 ? `<span class="stat-down">${diff}</span>` : `<span style="color:#888">0</span>`);
             sHtml += `<div class="tooltip-stat"><span>${s.toUpperCase()}:</span> <span>${v} (${dText})</span></div>`;
         });
-    } else { // Pet
+    } else {
         sHtml = `<div class="tooltip-stat"><span>${item.stat.toUpperCase()}:</span> <span>+${item.val}</span></div>`;
     }
     tooltip.innerHTML = `<div class="tooltip-header" style="color:${item.rarity?.color || '#fff'}">${item.name}</div><div style="font-size:11px; color:#888; margin-bottom:10px;">Tipo: ${item.type.toUpperCase()}</div><div style="background:#111; padding:10px; border-radius:5px;">${sHtml}</div><div style="font-size:10px; color:#f1c40f; margin-top:10px; text-align:center;">CLIQUE PARA EQUIPAR</div>`;
