@@ -3,19 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bit Heroes Clone - HARDCORE & TALENTS</title>
+    <title>Bit Heroes Clone - God Edition</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- SIDEBAR DE DROPS -->
-    <div id="drop-sidebar" class="sidebar closed">
-        <button id="toggle-sidebar" onclick="toggleSidebar()">📦 DROPS</button>
-        <div id="sidebar-content">
-            <h4 style="color:#f1c40f; margin-bottom:10px; text-align:center; border-bottom:1px solid #444; padding-bottom:5px;">CHANCES DE DROP</h4>
-            <div id="drop-list" style="font-size: 11px; overflow-y: auto; max-height: 80vh;">Buscando inimigo...</div>
-        </div>
-    </div>
-
     <div id="game-container">
         <!-- BARRA SUPERIOR -->
         <div id="top-bar">
@@ -39,22 +30,6 @@
             </div>
         </div>
 
-        <!-- PAINEL ESQUERDO: STATUS TOTAIS -->
-        <div id="left-panel">
-            <h3>STATUS DO HERÓI</h3>
-            <div id="stats-list">
-                <div class="stat-row"><span>⚔️ ATAQUE:</span> <span id="stat-atk" class="val">0</span></div>
-                <div class="stat-row"><span>❤️ VIDA MÁX:</span> <span id="stat-hp" class="val">0</span></div>
-                <div class="stat-row"><span>🛡️ DEFESA:</span> <span id="stat-def" class="val">0</span></div>
-                <div class="stat-row"><span>💥 CRÍTICO:</span> <span id="stat-crit" class="val">0%</span></div>
-                <div class="stat-row"><span>💨 ESQUIVA:</span> <span id="stat-evade" class="val">0%</span></div>
-                <div class="stat-row"><span>🩸 LIFE STEAL:</span> <span id="stat-lifesteal" class="val">0%</span></div>
-                <div class="stat-row"><span>🍀 SORTE:</span> <span id="stat-luck" class="val">2.0x</span></div>
-                <hr style="border:0; border-top:1px solid #333; margin:10px 0;">
-                <div class="stat-row" style="color:#f1c40f; font-size:16px;"><span>🌟 POWER:</span> <span id="stat-pr" class="val">0</span></div>
-            </div>
-        </div>
-
         <!-- CENA DE BATALHA -->
         <div id="battle-scene">
             <div id="enemy-area" class="entity-area">
@@ -63,52 +38,49 @@
                     <div id="enemy-hp-bar-inner" class="hp-bar"></div>
                     <span id="enemy-hp-text">0/0</span>
                 </div>
-                <span id="enemy-name">...</span>
+                <span id="enemy-name">Carregando...</span>
+                <span id="enemy-type" class="badge">ZONA 1</span>
             </div>
 
             <div id="player-area" class="entity-area">
+                <div id="mount-sprite" class="mount-sprite"></div>
                 <div id="player-sprite" class="sprite"></div>
                 <div class="hp-bar-container">
                     <div id="player-hp-bar-inner" class="hp-bar"></div>
                     <span id="player-hp-text">0/0</span>
                 </div>
-                <span id="player-name">HERÓI</span>
+                <span id="player-name">Herói Lendário</span>
             </div>
         </div>
 
-        <!-- PAINEL DIREITO: EQUIPAMENTOS E INVENTÁRIO -->
+        <!-- PAINEL DIREITO: EQUIPAMENTOS, MONTARIA E INVENTÁRIO -->
         <div id="right-panel">
             <div class="panel-section">
-                <h3>EQUIPAMENTOS & PET</h3>
+                <h3>EQUIPAMENTOS</h3>
                 <div class="equip-slots">
-                    <div class="slot" id="slot-weapon" title="Arma">⚔️</div>
-                    <div class="slot" id="slot-armor" title="Armadura">🛡️</div>
-                    <div class="slot" id="slot-mount" title="Montaria">🐎</div>
-                    <div class="slot" id="slot-pet" title="Pet">🐾</div>
+                    <div class="slot" id="slot-weapon" data-type="weapon">⚔️</div>
+                    <div class="slot" id="slot-armor" data-type="armor">🛡️</div>
+                    <div class="slot" id="slot-mount" data-type="mount">🐎</div>
                 </div>
             </div>
-            
             <div class="panel-section">
-                <h3>RELÍQUIAS (MAX 5)</h3>
-                <div id="relic-slots" class="equip-slots" style="justify-content: center; gap: 5px;">
-                </div>
-            </div>
-
-            <div id="inventory-section" class="panel-section">
                 <h3>INVENTÁRIO</h3>
                 <div id="inventory-grid" class="grid"></div>
             </div>
-            
-            <div id="shop-section" class="panel-section">
-                <h3>LOJA & MELHORIAS</h3>
-                <div id="shop-container"></div>
+            <div class="panel-section">
+                <h3>LOJA DE UPGRADES</h3>
+                <div id="shop-container">
+                    <button class="shop-btn" id="upgrade-atk">Melhorar ATK (💰 100)</button>
+                    <button class="shop-btn" id="upgrade-hp">Melhorar HP (💰 100)</button>
+                    <button class="shop-btn" id="upgrade-luck">Melhorar SORTE (💰 500)</button>
+                </div>
             </div>
         </div>
 
         <!-- LOG DE BATALHA -->
         <div id="battle-log"></div>
 
-        <!-- TOOLTIP -->
+        <!-- TOOLTIP DINÂMICO -->
         <div id="tooltip" class="tooltip" style="display: none;"></div>
     </div>
     <script src="game.js"></script>
