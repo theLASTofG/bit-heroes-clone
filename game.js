@@ -211,8 +211,10 @@ function updateUI() {
     el('player-exp-bar').style.width = `${(player.exp / player.nextLevelExp) * 100}%`;
     el('zone-display').textContent = inDungeon ? `Dungeon F${dungeonFloor}` : currentZone;
     
-    el('player-hp-text').textContent = `${formatNumber(Math.max(0, Math.ceil(player.hp)))}/${formatNumber(Math.ceil(player.maxHp))}`;
-    el('player-hp-bar-inner').style.width = `${Math.max(0, (player.hp / player.maxHp) * 100)}%`;
+    const pHp = Number(player.hp) || 0;
+    const pMax = Number(player.maxHp) || 1;
+    el('player-hp-text').textContent = `${formatNumber(Math.max(0, Math.ceil(pHp)))}/${formatNumber(Math.ceil(pMax))}`;
+    el('player-hp-bar-inner').style.width = `${Math.max(0, (pHp / pMax) * 100)}%`;
     
     el('stat-atk').textContent = formatNumber(player.atk);
     el('stat-hp').textContent = formatNumber(player.maxHp);
@@ -253,7 +255,7 @@ function updateUI() {
         const eMax = Number(currentEnemy.maxHp) || 1;
         el('enemy-hp-text').textContent = `${formatNumber(Math.max(0, Math.ceil(eHp)))}/${formatNumber(Math.ceil(eMax))}`;
         el('enemy-hp-bar-inner').style.width = `${Math.max(0, (eHp / eMax) * 100)}%`;
-        el('enemy-name').textContent = currentEnemy.name;
+        el('enemy-name').textContent = currentEnemy.name || "Inimigo";
     }
 
     ['weapon', 'armor', 'mount', 'pet'].forEach(type => {
@@ -324,17 +326,17 @@ function spawnEnemy() {
         else { modName = "FANTASMA "; modStatMult = 3; modLootMult = 15; modColor = "#8e44ad"; }
     }
 
-    const finalHp = Math.max(10, Math.floor(base.hp * zMult * bMult * modStatMult));
-    const finalAtk = Math.max(1, Math.floor(base.atk * zMult * bMult * modStatMult));
-    const finalDef = Math.max(0, Math.floor(20 * zMult * modStatMult));
+    const finalHp = Math.max(10, Math.floor((Number(base.hp) || 10) * (Number(zMult) || 1) * (Number(bMult) || 1) * (Number(modStatMult) || 1)));
+    const finalAtk = Math.max(1, Math.floor((Number(base.atk) || 1) * (Number(zMult) || 1) * (Number(bMult) || 1) * (Number(modStatMult) || 1)));
+    const finalDef = Math.max(0, Math.floor(20 * (Number(zMult) || 1) * (Number(modStatMult) || 1)));
 
     currentEnemy = {
-        name: modName + (isBoss ? `BOSS ${base.name.toUpperCase()}` : base.name),
+        name: (modName || "") + (isBoss ? `BOSS ${(base.name || "MONSTRO").toUpperCase()}` : (base.name || "MONSTRO")),
         hp: finalHp, maxHp: finalHp, atk: finalAtk, def: finalDef,
-        gold: Math.floor(100 * zMult * bMult * modLootMult),
-        exp: Math.floor(200 * zMult * bMult * modLootMult),
-        isBoss, color: modColor || (inDungeon ? (currentDungeonType === 'hell' ? "#ff0000" : "#8e44ad") : base.color), 
-        scale: (isBoss ? 1.7 : 1) * modScale, modType: modName.trim()
+        gold: Math.max(0, Math.floor(100 * (Number(zMult) || 1) * (Number(bMult) || 1) * (Number(modLootMult) || 1))),
+        exp: Math.max(0, Math.floor(200 * (Number(zMult) || 1) * (Number(bMult) || 1) * (Number(modLootMult) || 1))),
+        isBoss, color: modColor || (inDungeon ? (currentDungeonType === 'hell' ? "#ff0000" : "#8e44ad") : (base.color || "#fff")), 
+        scale: (isBoss ? 1.7 : 1) * (Number(modScale) || 1), modType: (modName || "").trim()
     };
     
     const sprite = el('enemy-sprite');
@@ -393,15 +395,15 @@ function performAttack(att, def) {
         let mult = 1; let crit = false;
         if (isPlayer && Math.random() * 100 < player.crit) { mult = player.critDmg; crit = true; }
         
-        let aAtk = Number(att.atk) || 1;
-        let dDef = Number(def.def) || 0;
-        let dMult = Number(mult) || 1;
+        let aAtk = Math.max(1, Number(att.atk) || 1);
+        let dDef = Math.max(0, Number(def.def) || 0);
+        let dMult = Math.max(0.1, Number(mult) || 1);
         
         let dmg = Math.floor((aAtk - (dDef * 0.4)) * (Math.random() * 0.2 + 0.9) * dMult);
         dmg = Math.max(Math.floor(aAtk * 0.3), dmg);
-        if (isNaN(dmg)) dmg = 1;
+        if (isNaN(dmg) || !isFinite(dmg)) dmg = 1;
         
-        def.hp -= dmg;
+        def.hp = Math.max(0, (Number(def.hp) || 0) - dmg);
         
         if (isPlayer) {
             if (player.lifeSteal > 0) player.hp = Math.min(player.maxHp, player.hp + Math.floor(dmg * (player.lifeSteal / 100)));
